@@ -1,0 +1,20 @@
+{
+  "name": "swvertex-camera-projector",
+  "private": true,
+  "version": "0.0.1",
+  "description": "SWVERTEX CAMERA PROJECTOR — monorepo (backend, admin, site, client Flutter)",
+  "workspaces": [
+    "services/*",
+    "apps/admin",
+    "apps/site",
+    "packages/*"
+  ],
+  "scripts": {
+    "dev:backend": "npm run start:dev --workspace services/backend",
+    "build:backend": "npm run build --workspace services/backend",
+    "test:backend": "npm run test --workspace services/backend",
+    "lint:backend": "npm run lint --workspace services/backend",
+    "docker:up": "docker compose up -d",
+    "docker:down": "docker compose down"
+  }
+}

@@ -1,0 +1,527 @@
+// Schéma de données initial — SWVERTEX CAMERA PROJECTOR
+// Reprend les entités du §12 du cahier des charges. Sera normalisé/étendu module par module
+// au fur et à mesure de leur implémentation réelle (voir STATUS.md).
+
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// ---------------------------------------------------------------------------
+// Identité, organisations, RBAC (§6.1, §6.2, §8)
+// ---------------------------------------------------------------------------
+
+enum UserStatus {
+  ACTIVE
+  SUSPENDED
+  DELETED
+  PENDING_VERIFICATION
+}
+
+enum AdminRole {
+  SUPER_ADMIN
+  PRODUCT_MANAGER
+  SUPPORT_AGENT
+  FINANCE_MANAGER
+  TECHNICAL_OPERATOR
+  CONTENT_MANAGER
+  READ_ONLY_AUDITOR
+}
+
+model User {
+  id                String     @id @default(uuid())
+  email             String     @unique
+  passwordHash      String
+  status            UserStatus @default(PENDING_VERIFICATION)
+  emailVerifiedAt   DateTime?
+  mfaEnabled        Boolean    @default(false)
+  adminRole         AdminRole? // null = utilisateur standard, non opérateur back-office
+  preferences       Json?
+  createdAt         DateTime   @default(now())
+  updatedAt         DateTime   @updatedAt
+
+  ownedOrganizations     Organization[]       @relation("OrganizationOwner")
+  organizationMemberships OrganizationMember[]
+  devices                Device[]
+  accessories            Accessory[]
+  subscriptions          Subscription[]
+  supportTicketsRaised   SupportTicket[]      @relation("TicketRequester")
+  supportTicketsAssigned SupportTicket[]      @relation("TicketAssignee")
+  supportMessages        SupportMessage[]
+  cmsPagesAuthored       CmsPage[]
+  articlesAuthored       Article[]
+  auditLogEntries        AuditLog[]
+}
+
+enum OrganizationStatus {
+  ACTIVE
+  SUSPENDED
+  CLOSED
+}
+
+model Organization {
+  id        String              @id @default(uuid())
+  name      String
+  ownerId   String
+  owner     User                @relation("OrganizationOwner", fields: [ownerId], references: [id])
+  status    OrganizationStatus  @default(ACTIVE)
+  settings  Json?
+  createdAt DateTime            @default(now())
+  updatedAt DateTime            @updatedAt
+
+  members       OrganizationMember[]
+  devices       Device[]
+  subscriptions Subscription[]
+}
+
+enum OrganizationRole {
+  OWNER
+  ADMIN
+  MEMBER
+}
+
+enum OrganizationMemberStatus {
+  INVITED
+  ACTIVE
+  SUSPENDED
+  REMOVED
+}
+
+model OrganizationMember {
+  id             String                   @id @default(uuid())
+  organizationId String
+  organization   Organization             @relation(fields: [organizationId], references: [id])
+  userId         String
+  user           User                     @relation(fields: [userId], references: [id])
+  role           OrganizationRole         @default(MEMBER)
+  status         OrganizationMemberStatus @default(INVITED)
+  invitedAt      DateTime                 @default(now())
+  joinedAt       DateTime?
+
+  @@unique([organizationId, userId])
+}
+
+// ---------------------------------------------------------------------------
+// Appareils et accessoires (§6.3)
+// ---------------------------------------------------------------------------
+
+enum DeviceType {
+  PHONE
+  COMPUTER
+  RECEIVER
+  ACCESSORY_CONTROLLER
+}
+
+enum DevicePlatform {
+  ANDROID
+  IOS
+  WINDOWS
+  MACOS
+  WEB
+}
+
+enum DeviceStatus {
+  ACTIVE
+  BLOCKED
+  REVOKED
+}
+
+model Device {
+  id             String         @id @default(uuid())
+  ownerId        String?
+  owner          User?          @relation(fields: [ownerId], references: [id])
+  organizationId String?
+  organization   Organization?  @relation(fields: [organizationId], references: [id])
+  type           DeviceType
+  platform       DevicePlatform
+  model          String?
+  osVersion      String?
+  appVersion     String?
+  status         DeviceStatus   @default(ACTIVE)
+  lastActiveAt   DateTime?
+  createdAt      DateTime       @default(now())
+
+  sessionsAsSource      ProjectionSession[] @relation("SessionSource")
+  sessionsAsDestination ProjectionSession[] @relation("SessionDestination")
+}
+
+enum AccessorySaleStatus {
+  IN_STOCK
+  SOLD
+  RETURNED
+}
+
+enum AccessoryStatus {
+  ACTIVE
+  DEFECTIVE
+  RETIRED
+}
+
+model Accessory {
+  id                 String              @id @default(uuid())
+  serialNumber       String              @unique
+  model              String
+  firmwareVersion    String?
+  batchNumber        String?
+  warrantyExpiresAt  DateTime?
+  ownerId            String?
+  owner              User?               @relation(fields: [ownerId], references: [id])
+  saleStatus         AccessorySaleStatus @default(IN_STOCK)
+  status             AccessoryStatus     @default(ACTIVE)
+  createdAt          DateTime            @default(now())
+}
+
+// ---------------------------------------------------------------------------
+// Compatibilité et sessions de projection (§3, §7.5, §12)
+// ---------------------------------------------------------------------------
+
+enum ProjectionMode {
+  MODE_A_USB_C
+  MODE_B_WIRELESS
+  MODE_C_LENS
+  CAMERA_SHARE
+  SCREEN_SHARE
+}
+
+enum CompatibilityResult {
+  UNTESTED
+  IN_TEST
+  VALIDATED
+  PARTIAL
+  NOT_COMPATIBLE
+  RETIRED
+}
+
+model CompatibilityRecord {
+  id              String               @id @default(uuid())
+  deviceModel     String
+  accessoryModel  String?
+  osName          String
+  osVersion       String?
+  mode            ProjectionMode
+  feature         String // discovery, pairing, video, audio, control, resolution, firmware...
+  result          CompatibilityResult  @default(UNTESTED)
+  testedVersion   String?
+  testedAt        DateTime?
+  createdAt       DateTime             @default(now())
+}
+
+enum ProjectionSessionState {
+  STARTED
+  ACTIVE
+  ENDED
+  FAILED
+}
+
+enum ConnectionType {
+  LOCAL_DIRECT
+  LOCAL_TURN_RELAY
+  UNKNOWN
+}
+
+model ProjectionSession {
+  id                   String                  @id @default(uuid())
+  sourceDeviceId       String
+  sourceDevice         Device                  @relation("SessionSource", fields: [sourceDeviceId], references: [id])
+  destinationDeviceId  String?
+  destinationDevice    Device?                 @relation("SessionDestination", fields: [destinationDeviceId], references: [id])
+  mode                 ProjectionMode
+  state                ProjectionSessionState  @default(STARTED)
+  connectionType       ConnectionType          @default(UNKNOWN)
+  qualityMetrics       Json? // résolution, fps, latence estimée — métadonnées minimales, jamais de contenu
+  startedAt            DateTime                @default(now())
+  endedAt              DateTime?
+}
+
+// ---------------------------------------------------------------------------
+// Licences, abonnements, paiements (§6.4)
+// ---------------------------------------------------------------------------
+
+enum PlanType {
+  FREE
+  TRIAL
+  SUBSCRIPTION_MONTHLY
+  SUBSCRIPTION_ANNUAL
+  PERPETUAL_LICENSE
+}
+
+model Plan {
+  id          String   @id @default(uuid())
+  code        String   @unique
+  name        String
+  type        PlanType
+  priceCents  Int      @default(0)
+  currency    String   @default("EUR")
+  deviceLimit Int?
+  seatLimit   Int?
+  features    Json?
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+
+  subscriptions Subscription[]
+}
+
+enum SubscriptionStatus {
+  TRIALING
+  ACTIVE
+  PAST_DUE
+  SUSPENDED
+  CANCELED
+  EXPIRED
+}
+
+model Subscription {
+  id                 String             @id @default(uuid())
+  planId             String
+  plan               Plan               @relation(fields: [planId], references: [id])
+  userId             String?
+  user               User?              @relation(fields: [userId], references: [id])
+  organizationId     String?
+  organization       Organization?      @relation(fields: [organizationId], references: [id])
+  status             SubscriptionStatus @default(TRIALING)
+  trialEndsAt        DateTime?
+  currentPeriodStart DateTime?
+  currentPeriodEnd   DateTime?
+  cancelAtPeriodEnd  Boolean            @default(false)
+  createdAt          DateTime           @default(now())
+  updatedAt          DateTime           @updatedAt
+
+  transactions Transaction[]
+}
+
+enum TransactionStatus {
+  PENDING
+  SUCCEEDED
+  FAILED
+  REFUNDED
+}
+
+model Transaction {
+  id                 String             @id @default(uuid())
+  subscriptionId     String?
+  subscription       Subscription?      @relation(fields: [subscriptionId], references: [id])
+  amountCents        Int
+  currency           String
+  provider           String // "stripe", "manual", ...
+  providerReference  String?
+  status             TransactionStatus  @default(PENDING)
+  createdAt          DateTime           @default(now())
+
+  invoice Invoice?
+}
+
+enum InvoiceStatus {
+  DRAFT
+  ISSUED
+  PAID
+  VOID
+}
+
+model Invoice {
+  id            String        @id @default(uuid())
+  transactionId String?       @unique
+  transaction   Transaction?  @relation(fields: [transactionId], references: [id])
+  number        String        @unique
+  amountCents   Int
+  currency      String
+  pdfUrl        String?
+  status        InvoiceStatus @default(DRAFT)
+  issuedAt      DateTime?
+  createdAt     DateTime      @default(now())
+}
+
+// ---------------------------------------------------------------------------
+// Support (§6.6, §7.8)
+// ---------------------------------------------------------------------------
+
+enum TicketCategory {
+  ACCOUNT
+  PAYMENT
+  CONNECTION
+  QUALITY
+  COMPATIBILITY
+  HARDWARE
+  SECURITY
+}
+
+enum TicketPriority {
+  LOW
+  MEDIUM
+  HIGH
+  URGENT
+}
+
+enum TicketStatus {
+  OPEN
+  IN_PROGRESS
+  WAITING_USER
+  RESOLVED
+  CLOSED
+}
+
+model SupportTicket {
+  id           String         @id @default(uuid())
+  requesterId  String
+  requester    User           @relation("TicketRequester", fields: [requesterId], references: [id])
+  assignedToId String?
+  assignedTo   User?          @relation("TicketAssignee", fields: [assignedToId], references: [id])
+  category     TicketCategory
+  priority     TicketPriority @default(MEDIUM)
+  status       TicketStatus   @default(OPEN)
+  createdAt    DateTime       @default(now())
+  updatedAt    DateTime       @updatedAt
+
+  messages SupportMessage[]
+}
+
+model SupportMessage {
+  id             String        @id @default(uuid())
+  ticketId       String
+  ticket         SupportTicket @relation(fields: [ticketId], references: [id])
+  authorId       String
+  author         User          @relation(fields: [authorId], references: [id])
+  body           String
+  isInternalNote Boolean       @default(false)
+  createdAt      DateTime      @default(now())
+}
+
+// ---------------------------------------------------------------------------
+// Versions et firmware (§7.7, §11)
+// ---------------------------------------------------------------------------
+
+enum ReleaseChannel {
+  STABLE
+  BETA
+  INTERNAL
+}
+
+enum ReleaseStatus {
+  DRAFT
+  PUBLISHED
+  DISABLED
+}
+
+enum ReleasePlatform {
+  ANDROID
+  IOS
+  WINDOWS
+  MACOS
+  WEB
+  BACKEND
+}
+
+model AppRelease {
+  id                String          @id @default(uuid())
+  platform          ReleasePlatform
+  version           String
+  channel           ReleaseChannel  @default(STABLE)
+  releaseNotes       String?
+  isMinimumRequired Boolean         @default(false)
+  status            ReleaseStatus   @default(DRAFT)
+  publishedAt       DateTime?
+  createdAt          DateTime        @default(now())
+
+  @@unique([platform, version])
+}
+
+model FirmwareRelease {
+  id             String         @id @default(uuid())
+  accessoryModel String
+  version        String
+  channel        ReleaseChannel @default(STABLE)
+  releaseNotes   String?
+  signatureHash  String
+  status         ReleaseStatus  @default(DRAFT)
+  publishedAt    DateTime?
+  createdAt      DateTime       @default(now())
+
+  @@unique([accessoryModel, version])
+}
+
+// ---------------------------------------------------------------------------
+// CMS / site public (§9)
+// ---------------------------------------------------------------------------
+
+enum CmsStatus {
+  DRAFT
+  IN_REVIEW
+  PUBLISHED
+  SCHEDULED
+  UNPUBLISHED
+}
+
+model CmsPage {
+  id              String    @id @default(uuid())
+  slug            String
+  locale          String    @default("fr")
+  title           String
+  blocks          Json
+  status          CmsStatus @default(DRAFT)
+  seoTitle        String?
+  seoDescription  String?
+  authorId        String
+  author          User      @relation(fields: [authorId], references: [id])
+  publishedAt     DateTime?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  @@unique([slug, locale])
+}
+
+model Media {
+  id        String   @id @default(uuid())
+  filename  String
+  url       String
+  altText   String?
+  mimeType  String
+  sizeBytes Int
+  createdAt DateTime @default(now())
+}
+
+enum ArticleCategory {
+  NEWS
+  GUIDE
+  FAQ
+}
+
+model Article {
+  id          String          @id @default(uuid())
+  slug        String
+  locale      String          @default("fr")
+  title       String
+  body        Json
+  category    ArticleCategory
+  status      CmsStatus       @default(DRAFT)
+  authorId    String
+  author      User            @relation(fields: [authorId], references: [id])
+  publishedAt DateTime?
+  createdAt   DateTime        @default(now())
+
+  @@unique([slug, locale])
+}
+
+// ---------------------------------------------------------------------------
+// Audit (§8.1, §10)
+// ---------------------------------------------------------------------------
+
+enum AuditResult {
+  SUCCESS
+  FAILURE
+}
+
+model AuditLog {
+  id         String      @id @default(uuid())
+  actorId    String?
+  actor      User?       @relation(fields: [actorId], references: [id])
+  action     String
+  targetType String
+  targetId   String?
+  result     AuditResult
+  metadata   Json?
+  ipAddress  String?
+  createdAt  DateTime    @default(now())
+}

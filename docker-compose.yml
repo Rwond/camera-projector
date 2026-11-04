@@ -1,0 +1,36 @@
+name: swvertex-camera-projector
+
+services:
+  postgres:
+    image: postgres:17-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: swvertex
+      POSTGRES_PASSWORD: swvertex_dev_password
+      POSTGRES_DB: camera_projector
+    ports:
+      - "5433:5432" # 5432 est déjà pris par un PostgreSQL natif existant sur ce poste
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U swvertex -d camera_projector"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  postgres_data:
+  redis_data:

@@ -1,0 +1,46 @@
+name: backend-ci
+
+on:
+  push:
+    paths:
+      - "services/backend/**"
+      - ".github/workflows/backend-ci.yml"
+  pull_request:
+    paths:
+      - "services/backend/**"
+
+jobs:
+  build-test:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: services/backend
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_USER: swvertex
+          POSTGRES_PASSWORD: swvertex_dev_password
+          POSTGRES_DB: camera_projector
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U swvertex -d camera_projector"
+          --health-interval 5s --health-timeout 5s --health-retries 10
+      redis:
+        image: redis:7-alpine
+        ports: ["6379:6379"]
+    env:
+      DATABASE_URL: postgresql://swvertex:swvertex_dev_password@localhost:5432/camera_projector?schema=public
+      REDIS_URL: redis://localhost:6379
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+          cache: "npm"
+      - run: npm ci
+      - run: npx prisma generate
+      - run: npx prisma migrate deploy
+      - run: npm run lint
+      - run: npm run build
+      - run: npm run test
