@@ -13,6 +13,8 @@ import { CompatibilityModule } from './compatibility/compatibility.module.js';
 import { RbacModule } from './rbac/rbac.module.js';
 import { AdminModule } from './admin/admin.module.js';
 import { CmsModule } from './cms/cms.module.js';
+import { NotificationsModule } from './notifications/notifications.module.js';
+import { SupportModule } from './support/support.module.js';
 
 @Module({
   imports: [
@@ -28,6 +30,8 @@ import { CmsModule } from './cms/cms.module.js';
     RbacModule,
     AdminModule,
     CmsModule,
+    NotificationsModule,
+    SupportModule,
   ],
   controllers: [AppController],
   providers: [AppService],

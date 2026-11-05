@@ -48,7 +48,21 @@ Dernière mise à jour : 2026-11-05.
   chaque action sensible journalisée dans `AuditLog`. Catalogue de médias (métadonnées uniquement :
   nom, URL, type MIME, taille — **l'upload de fichier lui-même n'est pas intégré**, `url` doit déjà
   pointer vers un fichier accessible ; pas de pipeline de stockage/CDN branché).
-- 73 tests automatisés passants ; lint (`oxlint`) sans erreur ; vérifié manuellement en conditions
+- Module `support` (§6.6) : création de ticket (catégorie + premier message), liste et consultation
+  de ses propres tickets, réponse — un ticket `CLOSED` refuse les nouveaux messages du demandeur
+  (400). Côté staff (RBAC, ressource `support`, rôle `SUPPORT_AGENT`/`SUPER_ADMIN`) : liste et
+  consultation de tous les tickets (filtrables par statut/catégorie), ajout de messages publics ou de
+  **notes internes jamais visibles du demandeur**, mise à jour du statut/priorité/assignation
+  (journalisée dans `AuditLog`).
+- Module `notifications` (§6.5) : journal d'envoi (`Notification` : canal, template, statut,
+  tentatives, erreur), historique personnel (`GET /notifications`), vue admin complète et nouvelle
+  tentative contrôlée (`POST /admin/notifications/:id/retry`). **Aucun fournisseur e-mail/push réel
+  n'est branché** — le transport par défaut (`LogNotificationTransport`) se contente de journaliser et
+  simule toujours un succès ; à remplacer par un vrai transport (SMTP/SendGrid/FCM, choix de
+  prestataire en attente) sans changer le service, qui dépend d'une interface. Pas de déclenchement
+  automatique depuis l'inscription pour éviter une dépendance circulaire avec `AuthModule` — déclenché
+  pour l'instant uniquement via l'API admin (`POST /admin/notifications`, réservé à `SUPER_ADMIN`).
+- 89 tests automatisés passants ; lint (`oxlint`) sans erreur ; vérifié manuellement en conditions
   réelles (serveur démarré, base de données de développement) : flux organizations complet
   (register→create org→invite→accept→list→retrait du owner refusé en 403→accès sans jeton refusé en
   401), flux devices complet (register→list→heartbeat→accès par un autre utilisateur refusé en 403→
@@ -59,23 +73,31 @@ Dernière mise à jour : 2026-11-05.
   403→promotion au premier Super Admin par écriture DB directe→Super Admin délègue TECHNICAL_OPERATOR
   à un autre compte→cet opérateur crée une fiche accessoire et un enregistrement de compatibilité→un
   utilisateur sans rôle est refusé en 403 sur les mêmes actions→le journal d'audit contient bien les
-  trois actions effectuées), et flux CMS complet (délégation CONTENT_MANAGER→création de page en
+  trois actions effectuées), flux CMS complet (délégation CONTENT_MANAGER→création de page en
   brouillon invisible du public en 404→publication→visible du public en 200→un rôle sans permission
   cms refusé en 403→articles publiés filtrables par catégorie→dépublication d'un article disparaît
   bien de la liste publique→programmation future acceptée, programmation passée refusée en 400, page
-  programmée toujours invisible du public→enregistrement d'un média).
+  programmée toujours invisible du public→enregistrement d'un média), et flux support/notifications
+  complet (délégation SUPPORT_AGENT→création de ticket→note interne de l'agent invisible pour le
+  client (2 messages vus contre 3 côté staff)→un utilisateur sans rôle support refusé en 403→fermeture
+  du ticket→nouveau message du client refusé en 400→notification envoyée par un Super Admin, visible
+  dans l'historique du client et la vue admin, relance réussie→un support agent sans permission
+  d'envoi refusé en 403).
 
 ## En cours
 
-- Rien en cours activement — en attente de la prochaine priorité (billing/paiements, ou pages du site
-  public restantes : tarifs, téléchargements, support).
+- Rien en cours activement — en attente de la prochaine priorité (billing/paiements, ou démarrage des
+  apps Next.js/Flutter).
 
 ## En attente (bloqué par une décision ou une dépendance)
 
-- Modules métier restants (billing, notifications, support) : non commencés.
+- Module billing/abonnements : non commencé — attend les décisions du §18 (modèle commercial,
+  prestataire de paiement).
 - Une page/un article `SCHEDULED` ne bascule pas automatiquement en `PUBLISHED` à l'heure dite — il
   n'y a pas de worker/cron pour ça. Il faut appeler `publish` manuellement au bon moment, ou construire
   ce worker plus tard (nécessiterait Redis/BullMQ, déjà prévu dans l'architecture mais pas encore câblé).
+- Notifications : aucun transport e-mail/push réel n'est branché (voir ci-dessus) ; aucun
+  déclenchement automatique depuis les autres modules (inscription, facturation...) pour l'instant.
 - Apps Next.js `admin` et `site` : non démarrées.
 - Client Flutter (`apps/client`) : non démarré.
 - Mode A (module USB-C), Mode B (projecteur Wi-Fi), Mode C (lentille) : non démarrés — dépendent de

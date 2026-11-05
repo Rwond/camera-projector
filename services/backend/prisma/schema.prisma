@@ -55,6 +55,7 @@ model User {
   cmsPagesAuthored       CmsPage[]
   articlesAuthored       Article[]
   auditLogEntries        AuditLog[]
+  notifications          Notification[]
 }
 
 enum OrganizationStatus {
@@ -387,6 +388,36 @@ model SupportMessage {
   body           String
   isInternalNote Boolean       @default(false)
   createdAt      DateTime      @default(now())
+}
+
+// ---------------------------------------------------------------------------
+// Notifications (§6.5)
+// ---------------------------------------------------------------------------
+
+enum NotificationChannel {
+  EMAIL
+  IN_APP
+  PUSH
+}
+
+enum NotificationStatus {
+  PENDING
+  SENT
+  FAILED
+}
+
+model Notification {
+  id        String              @id @default(uuid())
+  userId    String
+  user      User                @relation(fields: [userId], references: [id])
+  channel   NotificationChannel
+  template  String // ex. "email_verification", "password_reset", "invoice_issued"
+  payload   Json?
+  status    NotificationStatus  @default(PENDING)
+  error     String?
+  attempts  Int                 @default(0)
+  sentAt    DateTime?
+  createdAt DateTime            @default(now())
 }
 
 // ---------------------------------------------------------------------------

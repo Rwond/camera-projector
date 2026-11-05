@@ -34,4 +34,14 @@ describe('hasPermission', () => {
   it('gives TECHNICAL_OPERATOR no access to the CMS', () => {
     expect(hasPermission('TECHNICAL_OPERATOR', 'cms', 'read')).toBe(false);
   });
+
+  it('lets SUPPORT_AGENT manage tickets but not finance', () => {
+    expect(hasPermission('SUPPORT_AGENT', 'support', 'create')).toBe(true);
+    expect(hasPermission('SUPPORT_AGENT', 'support', 'update')).toBe(true);
+    expect(hasPermission('SUPPORT_AGENT', 'support', 'delete')).toBe(false);
+  });
+
+  it('gives CONTENT_MANAGER no access to support tickets', () => {
+    expect(hasPermission('CONTENT_MANAGER', 'support', 'read')).toBe(false);
+  });
 });
