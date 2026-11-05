@@ -21,18 +21,24 @@ Dernière mise à jour : 2026-11-05.
 - Module `organizations` (§6.2) : création d'organisation (créateur = OWNER), invitation d'un membre
   existant par e-mail, acceptation d'invitation, retrait d'un membre (le OWNER ne peut pas être retiré),
   liste des membres — autorisations vérifiées côté serveur (OWNER/ADMIN uniquement pour inviter/retirer).
-- 27 tests automatisés passants ; lint (`oxlint`) sans erreur ; vérifié manuellement en conditions
-  réelles (serveur démarré, base de données de développement, flux complet register→create org→invite→
-  accept→list→tentative de retrait du owner refusée en 403→accès sans jeton refusé en 401).
+- Module `devices` (§6.3, hors accessoires/compatibilité) : enregistrement d'un appareil (type,
+  plateforme, modèle, OS, version d'app), liste des appareils du compte, heartbeat (`lastActiveAt`),
+  révocation (dissociation) — accès strictement limité au propriétaire, vérifié côté serveur.
+- 35 tests automatisés passants ; lint (`oxlint`) sans erreur ; vérifié manuellement en conditions
+  réelles (serveur démarré, base de données de développement) : flux organizations complet
+  (register→create org→invite→accept→list→retrait du owner refusé en 403→accès sans jeton refusé en
+  401) et flux devices complet (register→list→heartbeat→accès par un autre utilisateur refusé en 403→
+  revoke→heartbeat après revoke refusé en 403→appareil inconnu en 404).
 
 ## En cours
 
-- Rien en cours activement — en attente de la prochaine priorité (devices, RBAC admin, ou autre).
+- Rien en cours activement — en attente de la prochaine priorité (accessories/compatibility, billing,
+  ou RBAC admin).
 
 ## En attente (bloqué par une décision ou une dépendance)
 
-- Modules métier restants (devices, accessories, compatibility, billing, notifications, support, cms,
-  audit, RBAC admin) : non commencés.
+- Modules métier restants (accessories, compatibility, billing, notifications, support, cms, audit,
+  RBAC admin) : non commencés.
 - Apps Next.js `admin` et `site` : non démarrées.
 - Client Flutter (`apps/client`) : non démarré.
 - Mode A (module USB-C), Mode B (projecteur Wi-Fi), Mode C (lentille) : non démarrés — dépendent de
