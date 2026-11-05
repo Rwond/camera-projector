@@ -24,21 +24,35 @@ Dernière mise à jour : 2026-11-05.
 - Module `devices` (§6.3, hors accessoires/compatibilité) : enregistrement d'un appareil (type,
   plateforme, modèle, OS, version d'app), liste des appareils du compte, heartbeat (`lastActiveAt`),
   révocation (dissociation) — accès strictement limité au propriétaire, vérifié côté serveur.
-- 35 tests automatisés passants ; lint (`oxlint`) sans erreur ; vérifié manuellement en conditions
+- Module `accessories` (§6.3, partie accessoires) : un utilisateur peut associer ("claim") un
+  accessoire déjà enregistré au catalogue par son numéro de série, le lister, le dissocier
+  ("release") ; accès strictement limité au propriétaire. La création de fiches catalogue
+  (`registerCatalogEntry`) est écrite et testée au niveau service mais **volontairement pas encore
+  exposée via HTTP** : c'est une action d'administration (§7.5) qui doit être protégée par le RBAC
+  admin, pas encore implémenté.
+- Module `compatibility` (§7.5/§9.2) : lecture publique (sans authentification) de la matrice de
+  compatibilité avec filtres par modèle d'appareil, d'accessoire et mode de projection — alimente la
+  future page "Compatibilité" du site public. L'écriture (`createRecord`) est elle aussi écrite/testée
+  au niveau service mais pas exposée via HTTP pour la même raison (RBAC admin requis).
+- 45 tests automatisés passants ; lint (`oxlint`) sans erreur ; vérifié manuellement en conditions
   réelles (serveur démarré, base de données de développement) : flux organizations complet
   (register→create org→invite→accept→list→retrait du owner refusé en 403→accès sans jeton refusé en
-  401) et flux devices complet (register→list→heartbeat→accès par un autre utilisateur refusé en 403→
-  revoke→heartbeat après revoke refusé en 403→appareil inconnu en 404).
+  401), flux devices complet (register→list→heartbeat→accès par un autre utilisateur refusé en 403→
+  revoke→heartbeat après revoke refusé en 403→appareil inconnu en 404), et flux accessories/compatibility
+  (lecture publique de la compatibilité→claim d'un accessoire catalogué→double claim refusé en 409→
+  numéro de série inconnu en 404→release par un autre utilisateur refusé en 403→release par le
+  propriétaire→accès sans jeton refusé en 401).
 
 ## En cours
 
-- Rien en cours activement — en attente de la prochaine priorité (accessories/compatibility, billing,
-  ou RBAC admin).
+- Rien en cours activement — en attente de la prochaine priorité (RBAC admin, qui débloquera
+  l'exposition HTTP des actions catalogue/compatibilité ci-dessus, ou billing).
 
 ## En attente (bloqué par une décision ou une dépendance)
 
-- Modules métier restants (accessories, compatibility, billing, notifications, support, cms, audit,
-  RBAC admin) : non commencés.
+- Modules métier restants (billing, notifications, support, cms, audit, RBAC admin) : non commencés.
+- Les actions d'administration catalogue accessoires et compatibilité (service prêt, voir ci-dessus)
+  attendent le RBAC admin avant de pouvoir être exposées via un contrôleur HTTP.
 - Apps Next.js `admin` et `site` : non démarrées.
 - Client Flutter (`apps/client`) : non démarré.
 - Mode A (module USB-C), Mode B (projecteur Wi-Fi), Mode C (lentille) : non démarrés — dépendent de
