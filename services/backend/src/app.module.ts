@@ -12,6 +12,7 @@ import { AccessoriesModule } from './accessories/accessories.module.js';
 import { CompatibilityModule } from './compatibility/compatibility.module.js';
 import { RbacModule } from './rbac/rbac.module.js';
 import { AdminModule } from './admin/admin.module.js';
+import { CmsModule } from './cms/cms.module.js';
 
 @Module({
   imports: [
@@ -26,6 +27,7 @@ import { AdminModule } from './admin/admin.module.js';
     CompatibilityModule,
     RbacModule,
     AdminModule,
+    CmsModule,
   ],
   controllers: [AppController],
   providers: [AppService],

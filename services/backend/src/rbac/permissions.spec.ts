@@ -24,4 +24,14 @@ describe('hasPermission', () => {
     expect(hasPermission('FINANCE_MANAGER', 'accessories', 'read')).toBe(false);
     expect(hasPermission('FINANCE_MANAGER', 'compatibility', 'read')).toBe(false);
   });
+
+  it('lets CONTENT_MANAGER manage the CMS but not accessories', () => {
+    expect(hasPermission('CONTENT_MANAGER', 'cms', 'create')).toBe(true);
+    expect(hasPermission('CONTENT_MANAGER', 'cms', 'approve')).toBe(true);
+    expect(hasPermission('CONTENT_MANAGER', 'accessories', 'read')).toBe(false);
+  });
+
+  it('gives TECHNICAL_OPERATOR no access to the CMS', () => {
+    expect(hasPermission('TECHNICAL_OPERATOR', 'cms', 'read')).toBe(false);
+  });
 });

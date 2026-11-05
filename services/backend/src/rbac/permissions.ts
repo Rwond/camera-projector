@@ -15,7 +15,7 @@ export const ADMIN_ROLES = [
 ] as const;
 export type AdminRole = (typeof ADMIN_ROLES)[number];
 
-export const RESOURCES = ['users', 'accessories', 'compatibility', 'audit'] as const;
+export const RESOURCES = ['users', 'accessories', 'compatibility', 'audit', 'cms'] as const;
 export type Resource = (typeof RESOURCES)[number];
 
 export type Action = 'read' | 'create' | 'update' | 'delete' | 'export' | 'approve';
@@ -28,12 +28,14 @@ export const PERMISSIONS: Record<AdminRole, Partial<Record<Resource, Action[]>>>
     accessories: ALL_ACTIONS,
     compatibility: ALL_ACTIONS,
     audit: ALL_ACTIONS,
+    cms: ALL_ACTIONS,
   },
   PRODUCT_MANAGER: {
     users: ['read'],
     accessories: ['read', 'create', 'update'],
     compatibility: ['read', 'create', 'update'],
     audit: ['read'],
+    cms: ['read'],
   },
   SUPPORT_AGENT: {
     users: ['read'],
@@ -49,12 +51,14 @@ export const PERMISSIONS: Record<AdminRole, Partial<Record<Resource, Action[]>>>
   },
   CONTENT_MANAGER: {
     audit: ['read'],
+    cms: ['read', 'create', 'update', 'delete', 'approve'],
   },
   READ_ONLY_AUDITOR: {
     users: ['read'],
     accessories: ['read'],
     compatibility: ['read'],
     audit: ['read', 'export'],
+    cms: ['read'],
   },
 };
 

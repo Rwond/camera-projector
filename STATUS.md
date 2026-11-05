@@ -40,26 +40,42 @@ Dernière mise à jour : 2026-11-05.
   un rôle — encodé dans la matrice, pas en dur), `GET /admin/audit-log`. Le tout premier Super Admin
   doit être promu hors API (écriture DB directe/script d'exploitation) — documenté comme limitation
   volontaire, pas de voie d'auto-promotion exposée.
-- 55 tests automatisés passants ; lint (`oxlint`) sans erreur ; vérifié manuellement en conditions
+- Module `cms` (§9) : pages et articles (actualités/guides/FAQ) avec cycle de vie complet
+  brouillon→publication→dépublication, ou brouillon→programmation (`schedule`, avec validation que la
+  date est dans le futur)→publication manuelle au moment voulu. Lecture publique sans authentification
+  (`GET /cms/pages`, `GET /cms/articles` avec filtre par catégorie) limitée au contenu réellement
+  `PUBLISHED`. Écriture réservée au RBAC (ressource `cms`, rôle `CONTENT_MANAGER` ou `SUPER_ADMIN`),
+  chaque action sensible journalisée dans `AuditLog`. Catalogue de médias (métadonnées uniquement :
+  nom, URL, type MIME, taille — **l'upload de fichier lui-même n'est pas intégré**, `url` doit déjà
+  pointer vers un fichier accessible ; pas de pipeline de stockage/CDN branché).
+- 73 tests automatisés passants ; lint (`oxlint`) sans erreur ; vérifié manuellement en conditions
   réelles (serveur démarré, base de données de développement) : flux organizations complet
   (register→create org→invite→accept→list→retrait du owner refusé en 403→accès sans jeton refusé en
   401), flux devices complet (register→list→heartbeat→accès par un autre utilisateur refusé en 403→
   revoke→heartbeat après revoke refusé en 403→appareil inconnu en 404), flux accessories/compatibility
   (lecture publique de la compatibilité→claim d'un accessoire catalogué→double claim refusé en 409→
   numéro de série inconnu en 404→release par un autre utilisateur refusé en 403→release par le
-  propriétaire→accès sans jeton refusé en 401), et flux RBAC complet (utilisateur non promu refusé en
+  propriétaire→accès sans jeton refusé en 401), flux RBAC complet (utilisateur non promu refusé en
   403→promotion au premier Super Admin par écriture DB directe→Super Admin délègue TECHNICAL_OPERATOR
   à un autre compte→cet opérateur crée une fiche accessoire et un enregistrement de compatibilité→un
   utilisateur sans rôle est refusé en 403 sur les mêmes actions→le journal d'audit contient bien les
-  trois actions effectuées).
+  trois actions effectuées), et flux CMS complet (délégation CONTENT_MANAGER→création de page en
+  brouillon invisible du public en 404→publication→visible du public en 200→un rôle sans permission
+  cms refusé en 403→articles publiés filtrables par catégorie→dépublication d'un article disparaît
+  bien de la liste publique→programmation future acceptée, programmation passée refusée en 400, page
+  programmée toujours invisible du public→enregistrement d'un média).
 
 ## En cours
 
-- Rien en cours activement — en attente de la prochaine priorité (billing/paiements, ou CMS/site).
+- Rien en cours activement — en attente de la prochaine priorité (billing/paiements, ou pages du site
+  public restantes : tarifs, téléchargements, support).
 
 ## En attente (bloqué par une décision ou une dépendance)
 
-- Modules métier restants (billing, notifications, support, cms) : non commencés.
+- Modules métier restants (billing, notifications, support) : non commencés.
+- Une page/un article `SCHEDULED` ne bascule pas automatiquement en `PUBLISHED` à l'heure dite — il
+  n'y a pas de worker/cron pour ça. Il faut appeler `publish` manuellement au bon moment, ou construire
+  ce worker plus tard (nécessiterait Redis/BullMQ, déjà prévu dans l'architecture mais pas encore câblé).
 - Apps Next.js `admin` et `site` : non démarrées.
 - Client Flutter (`apps/client`) : non démarré.
 - Mode A (module USB-C), Mode B (projecteur Wi-Fi), Mode C (lentille) : non démarrés — dépendent de
