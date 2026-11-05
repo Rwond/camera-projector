@@ -2,31 +2,37 @@
 
 Convention : une ligne passe en **Terminé** seulement si elle est implémentée ET testée (automatiquement ou manuellement, avec preuve). "Scaffold" = structure posée, aucune logique métier encore écrite.
 
-Dernière mise à jour : 2026-11-04.
+Dernière mise à jour : 2026-11-05.
 
 ## Terminé
 
-- Socle monorepo : structure de dossiers, workspaces npm, Docker Compose (Postgres 17 + Redis 7),
-  `.gitignore`, CI GitHub Actions pour le backend (`.github/workflows/backend-ci.yml`).
-- Backend NestJS scaffoldé, compile (`npm run build`) et démarre.
+- Socle monorepo : structure de dossiers, **vrai workspace npm** (hoisting à la racine — les commandes
+  backend s'exécutent avec `npm run <script> --workspace=services/backend` depuis la racine, pas
+  `cd services/backend && npm run ...`), Docker Compose (Postgres 17 + Redis 7), `.gitignore`, CI GitHub
+  Actions pour le backend (`.github/workflows/backend-ci.yml`).
+- Backend NestJS scaffoldé, compile (`npm run build --workspace=services/backend`) et démarre.
 - Schéma Prisma initial (§12 du cahier des charges) : migration `init` créée et appliquée sur la base
   de développement.
-- Module `health` : `GET /health` (liveness) et `GET /health/db` (ping base de données réelle) — 5 tests
-  unitaires passants.
-- Module `users` : `UsersService` (recherche par e-mail/id, création) — 2 tests unitaires passants.
+- Module `health` : `GET /health` (liveness) et `GET /health/db` (ping base de données réelle).
+- Module `users` : `UsersService` (recherche par e-mail/id, création).
 - Module `auth` : `POST /auth/register` et `POST /auth/login`, hash bcrypt, émission de JWT
-  access/refresh — 7 tests unitaires passants. Vérifié manuellement en conditions réelles (serveur
-  démarré, base de données de développement, requêtes HTTP réelles).
-- 15 tests automatisés passants au total ; lint (`oxlint`) sans erreur.
+  access/refresh, `JwtAuthGuard` réutilisable (vérifie le header `Authorization: Bearer`, attache
+  l'utilisateur à la requête).
+- Module `organizations` (§6.2) : création d'organisation (créateur = OWNER), invitation d'un membre
+  existant par e-mail, acceptation d'invitation, retrait d'un membre (le OWNER ne peut pas être retiré),
+  liste des membres — autorisations vérifiées côté serveur (OWNER/ADMIN uniquement pour inviter/retirer).
+- 27 tests automatisés passants ; lint (`oxlint`) sans erreur ; vérifié manuellement en conditions
+  réelles (serveur démarré, base de données de développement, flux complet register→create org→invite→
+  accept→list→tentative de retrait du owner refusée en 403→accès sans jeton refusé en 401).
 
 ## En cours
 
-- Rien en cours activement — en attente de la prochaine priorité (RBAC admin, ou organisations/devices).
+- Rien en cours activement — en attente de la prochaine priorité (devices, RBAC admin, ou autre).
 
 ## En attente (bloqué par une décision ou une dépendance)
 
-- Modules métier restants (organizations, devices, accessories, compatibility, billing, notifications,
-  support, cms, audit, RBAC admin) : non commencés.
+- Modules métier restants (devices, accessories, compatibility, billing, notifications, support, cms,
+  audit, RBAC admin) : non commencés.
 - Apps Next.js `admin` et `site` : non démarrées.
 - Client Flutter (`apps/client`) : non démarré.
 - Mode A (module USB-C), Mode B (projecteur Wi-Fi), Mode C (lentille) : non démarrés — dépendent de
@@ -41,6 +47,16 @@ Dernière mise à jour : 2026-11-04.
 
 ## Risques techniques identifiés
 
+- **Ce dépôt est un vrai workspace npm (hoisting à la racine).** Exécuter `npm install` ou tout script
+  npm depuis `services/backend` directement (au lieu de la racine avec `--workspace=services/backend`)
+  peut casser des dépendances transitives hoistées (vécu deux fois : `chokidar` puis `ajv` manquants
+  après un `npm install` lancé depuis le mauvais dossier). Toujours lancer les commandes npm du backend
+  depuis la racine du monorepo.
+- **Un guard/provider exporté d'un module (ex. `JwtAuthGuard`) ne suffit pas à rendre ses propres
+  dépendances (ex. `JwtService`) résolubles dans le module consommateur.** Il faut aussi ré-exporter le
+  module qui fournit cette dépendance (ici `JwtModule`) depuis `AuthModule`. Sinon NestJS lève une
+  `UnknownDependenciesException` au démarrage, pas à la compilation — à vérifier à chaque nouveau module
+  qui réutilise `JwtAuthGuard`.
 - **Prisma 7 a changé son modèle de configuration** (plus de `datasource.url` dans `schema.prisma` ; la
   CLI lit `prisma.config.ts`, et `PrismaClient` nécessite un driver adapter — `@prisma/adapter-pg` pour
   PostgreSQL). Documenté dans `services/backend/prisma.config.ts` et `src/prisma/prisma.service.ts`.
