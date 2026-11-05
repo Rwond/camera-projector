@@ -91,11 +91,21 @@ Dernière mise à jour : 2026-11-05.
   documentée dans `apps/site/README.md`. CORS activé côté backend (`CORS_ORIGINS`, restreint à
   l'origine du site). Build (`next build`) et lint passent ; vérifié visuellement dans le navigateur
   sur les quatre pages plus un cas 404 réel sur une page inexistante.
+- **Admin (`apps/admin`, Next.js/App Router)** : authentification par formulaire (`/login`) qui
+  pose le jeton d'accès/rafraîchissement en cookies **httpOnly** (jamais exposés au JavaScript
+  client — tous les appels au backend se font côté serveur Next.js, dans des Server
+  Components/Actions, jamais depuis le navigateur ; aucun CORS nécessaire pour cette app).
+  `proxy.ts` (ex-`middleware.ts` — convention renommée dans cette version de Next) redirige vers
+  `/login` toute route protégée sans jeton. Tableau de bord affichant l'utilisateur connecté, page
+  `/audit-log` consommant `GET /admin/audit-log` et affichant un message de refus propre (pas de
+  crash) quand le rôle ne donne pas la permission. Déconnexion qui efface les cookies. Build et lint
+  passent ; vérifié dans le navigateur : connexion, redirection si non connecté, affichage réel du
+  journal d'audit, refus RBAC propre pour un compte sans rôle, déconnexion puis re-redirection.
 
 ## En cours
 
-- Rien en cours activement — en attente de la prochaine priorité (billing/paiements, admin Next.js,
-  ou client Flutter).
+- Rien en cours activement — en attente de la prochaine priorité (billing/paiements, étoffer l'admin
+  — gestion des accessoires/compatibilité/CMS/support —, ou client Flutter).
 
 ## En attente (bloqué par une décision ou une dépendance)
 
@@ -106,7 +116,10 @@ Dernière mise à jour : 2026-11-05.
   ce worker plus tard (nécessiterait Redis/BullMQ, déjà prévu dans l'architecture mais pas encore câblé).
 - Notifications : aucun transport e-mail/push réel n'est branché (voir ci-dessus) ; aucun
   déclenchement automatique depuis les autres modules (inscription, facturation...) pour l'instant.
-- App Next.js `admin` (back-office) : non démarrée.
+- Admin : seules les pages connexion/tableau de bord/journal d'audit existent. Il manque les écrans
+  pour toutes les actions déjà prêtes côté backend (gestion des rôles, catalogue accessoires,
+  compatibilité, CMS pages/articles/médias, tickets support, notifications). Pas de rafraîchissement
+  automatique du jeton expiré (15 min) — l'utilisateur doit se reconnecter manuellement.
 - Client Flutter (`apps/client`) : non démarré.
 - Mode A (module USB-C), Mode B (projecteur Wi-Fi), Mode C (lentille) : non démarrés — dépendent de
   décisions matérielles/commerciales, voir [docs/decisions-a-valider.md](docs/decisions-a-valider.md).
@@ -120,6 +133,14 @@ Dernière mise à jour : 2026-11-05.
 
 ## Risques techniques identifiés
 
+- **Le disque C: de ce poste est quasiment plein** (quelques Go libres seulement une fois le cache
+  npm et le dossier Temp vidés). Le plus gros poste identifié est le disque virtuel WSL2 de Docker
+  Desktop (~59 Go, ne se réduit jamais tout seul même après suppression d'images/conteneurs — il faut
+  le compacter explicitement, pas fait ici faute d'accord explicite). Un disque plein a fait planter
+  Docker Desktop en plein milieu de la session (conteneurs arrêtés, erreurs `ECONNREFUSED` du
+  backend) ; il a suffi de relancer Docker Desktop une fois de l'espace libéré. Si des erreurs de
+  connexion à la base de données réapparaissent sans raison apparente, vérifier l'espace disque et
+  l'état de Docker Desktop avant de chercher un bug applicatif.
 - **Ce dépôt est un vrai workspace npm (hoisting à la racine).** Exécuter `npm install` ou tout script
   npm depuis un sous-dossier (`services/backend`, `apps/site`) directement, au lieu de la racine avec
   `--workspace=...`, peut casser des dépendances transitives hoistées. Rencontré trois fois
