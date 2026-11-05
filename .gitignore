@@ -12,6 +12,7 @@ npm-debug.log*
 .env
 .env.*
 !.env.example
+!.env.local.example
 
 # Prisma
 services/backend/src/generated/

@@ -83,11 +83,19 @@ Dernière mise à jour : 2026-11-05.
   du ticket→nouveau message du client refusé en 400→notification envoyée par un Super Admin, visible
   dans l'historique du client et la vue admin, relance réussie→un support agent sans permission
   d'envoi refusé en 403).
+- **Site public (`apps/site`, Next.js/App Router)** : accueil (page CMS `accueil`), compatibilité
+  (`/compatibilite`, lit `GET /compatibility`), actualités (`/actualites`, catégorie `NEWS`), guides
+  et FAQ (`/guides`, catégories `GUIDE`/`FAQ`), et une route générique `/[slug]` pour toute autre page
+  CMS publiée — tout le contenu vient réellement du backend, rien n'est codé en dur. Rendu de blocs
+  (`heading`, `text`, `cta`, `image`) via `BlockRenderer`, convention de contenu `{ blocks: Block[] }`
+  documentée dans `apps/site/README.md`. CORS activé côté backend (`CORS_ORIGINS`, restreint à
+  l'origine du site). Build (`next build`) et lint passent ; vérifié visuellement dans le navigateur
+  sur les quatre pages plus un cas 404 réel sur une page inexistante.
 
 ## En cours
 
-- Rien en cours activement — en attente de la prochaine priorité (billing/paiements, ou démarrage des
-  apps Next.js/Flutter).
+- Rien en cours activement — en attente de la prochaine priorité (billing/paiements, admin Next.js,
+  ou client Flutter).
 
 ## En attente (bloqué par une décision ou une dépendance)
 
@@ -98,7 +106,7 @@ Dernière mise à jour : 2026-11-05.
   ce worker plus tard (nécessiterait Redis/BullMQ, déjà prévu dans l'architecture mais pas encore câblé).
 - Notifications : aucun transport e-mail/push réel n'est branché (voir ci-dessus) ; aucun
   déclenchement automatique depuis les autres modules (inscription, facturation...) pour l'instant.
-- Apps Next.js `admin` et `site` : non démarrées.
+- App Next.js `admin` (back-office) : non démarrée.
 - Client Flutter (`apps/client`) : non démarré.
 - Mode A (module USB-C), Mode B (projecteur Wi-Fi), Mode C (lentille) : non démarrés — dépendent de
   décisions matérielles/commerciales, voir [docs/decisions-a-valider.md](docs/decisions-a-valider.md).
@@ -113,10 +121,20 @@ Dernière mise à jour : 2026-11-05.
 ## Risques techniques identifiés
 
 - **Ce dépôt est un vrai workspace npm (hoisting à la racine).** Exécuter `npm install` ou tout script
-  npm depuis `services/backend` directement (au lieu de la racine avec `--workspace=services/backend`)
-  peut casser des dépendances transitives hoistées (vécu deux fois : `chokidar` puis `ajv` manquants
-  après un `npm install` lancé depuis le mauvais dossier). Toujours lancer les commandes npm du backend
-  depuis la racine du monorepo.
+  npm depuis un sous-dossier (`services/backend`, `apps/site`) directement, au lieu de la racine avec
+  `--workspace=...`, peut casser des dépendances transitives hoistées. Rencontré trois fois
+  (`chokidar`, `ajv`, puis `es-toolkit` manquants) — la troisième fois, le `package-lock.json`
+  lui-même s'est révélé corrompu (une dépendance déclarée dans un bloc `dependencies` d'un paquet
+  sans jamais avoir sa propre entrée résolue dans le lockfile). Un `npm install` classique ne corrige
+  pas ça : il faut supprimer `node_modules` **et** `package-lock.json`, puis réinstaller à neuf.
+  Toujours lancer les commandes npm depuis la racine du monorepo, et si un module manquant réapparaît
+  après un simple `rm -rf node_modules && npm install`, passer directement à la suppression du
+  lockfile aussi plutôt que de boucler sur des réinstallations partielles.
+- **Le port 3000 (Next.js par défaut) est déjà pris sur ce poste** par un autre projet de
+  l'utilisateur ("Kokumba", un `web_admin` Next.js). Le site SWVERTEX tourne donc sur le port
+  **3002** (`npm run dev`/`start --workspace=apps/site`), comme le backend tourne sur 3001 et
+  Postgres sur 5433 pour la même raison. Ne jamais arrêter les processus Node d'un autre projet sur
+  ce poste en nettoyant les processus de test.
 - **Un guard/provider exporté d'un module (ex. `JwtAuthGuard`, `AdminPermissionGuard`) ne suffit pas à
   rendre ses propres dépendances résolubles dans le module consommateur.** Il faut aussi ré-exporter le
   module qui fournit chaque dépendance (`JwtModule` depuis `AuthModule` ; `UsersModule` depuis
