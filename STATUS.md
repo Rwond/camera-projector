@@ -26,33 +26,40 @@ Dernière mise à jour : 2026-11-05.
   révocation (dissociation) — accès strictement limité au propriétaire, vérifié côté serveur.
 - Module `accessories` (§6.3, partie accessoires) : un utilisateur peut associer ("claim") un
   accessoire déjà enregistré au catalogue par son numéro de série, le lister, le dissocier
-  ("release") ; accès strictement limité au propriétaire. La création de fiches catalogue
-  (`registerCatalogEntry`) est écrite et testée au niveau service mais **volontairement pas encore
-  exposée via HTTP** : c'est une action d'administration (§7.5) qui doit être protégée par le RBAC
-  admin, pas encore implémenté.
+  ("release") ; accès strictement limité au propriétaire. La création de fiches catalogue est
+  désormais exposée en `POST /admin/accessories`, protégée par le RBAC admin.
 - Module `compatibility` (§7.5/§9.2) : lecture publique (sans authentification) de la matrice de
   compatibilité avec filtres par modèle d'appareil, d'accessoire et mode de projection — alimente la
-  future page "Compatibilité" du site public. L'écriture (`createRecord`) est elle aussi écrite/testée
-  au niveau service mais pas exposée via HTTP pour la même raison (RBAC admin requis).
-- 45 tests automatisés passants ; lint (`oxlint`) sans erreur ; vérifié manuellement en conditions
+  future page "Compatibilité" du site public. L'écriture est exposée en `POST /admin/compatibility`,
+  protégée par le RBAC admin.
+- **RBAC admin (§8)** : matrice de permissions statique pour les 7 rôles du cahier des charges
+  (`services/backend/src/rbac/permissions.ts`), `AdminPermissionGuard` (relit le rôle en base à
+  chaque requête, ne fait jamais confiance à un rôle mis en cache dans le jeton), décorateur
+  `@RequirePermission(resource, action)`, `AuditService` qui journalise chaque action sensible dans
+  `AuditLog`. Endpoints : `PATCH /admin/users/:id/admin-role` (seul SUPER_ADMIN peut accorder/retirer
+  un rôle — encodé dans la matrice, pas en dur), `GET /admin/audit-log`. Le tout premier Super Admin
+  doit être promu hors API (écriture DB directe/script d'exploitation) — documenté comme limitation
+  volontaire, pas de voie d'auto-promotion exposée.
+- 55 tests automatisés passants ; lint (`oxlint`) sans erreur ; vérifié manuellement en conditions
   réelles (serveur démarré, base de données de développement) : flux organizations complet
   (register→create org→invite→accept→list→retrait du owner refusé en 403→accès sans jeton refusé en
   401), flux devices complet (register→list→heartbeat→accès par un autre utilisateur refusé en 403→
-  revoke→heartbeat après revoke refusé en 403→appareil inconnu en 404), et flux accessories/compatibility
+  revoke→heartbeat après revoke refusé en 403→appareil inconnu en 404), flux accessories/compatibility
   (lecture publique de la compatibilité→claim d'un accessoire catalogué→double claim refusé en 409→
   numéro de série inconnu en 404→release par un autre utilisateur refusé en 403→release par le
-  propriétaire→accès sans jeton refusé en 401).
+  propriétaire→accès sans jeton refusé en 401), et flux RBAC complet (utilisateur non promu refusé en
+  403→promotion au premier Super Admin par écriture DB directe→Super Admin délègue TECHNICAL_OPERATOR
+  à un autre compte→cet opérateur crée une fiche accessoire et un enregistrement de compatibilité→un
+  utilisateur sans rôle est refusé en 403 sur les mêmes actions→le journal d'audit contient bien les
+  trois actions effectuées).
 
 ## En cours
 
-- Rien en cours activement — en attente de la prochaine priorité (RBAC admin, qui débloquera
-  l'exposition HTTP des actions catalogue/compatibilité ci-dessus, ou billing).
+- Rien en cours activement — en attente de la prochaine priorité (billing/paiements, ou CMS/site).
 
 ## En attente (bloqué par une décision ou une dépendance)
 
-- Modules métier restants (billing, notifications, support, cms, audit, RBAC admin) : non commencés.
-- Les actions d'administration catalogue accessoires et compatibilité (service prêt, voir ci-dessus)
-  attendent le RBAC admin avant de pouvoir être exposées via un contrôleur HTTP.
+- Modules métier restants (billing, notifications, support, cms) : non commencés.
 - Apps Next.js `admin` et `site` : non démarrées.
 - Client Flutter (`apps/client`) : non démarré.
 - Mode A (module USB-C), Mode B (projecteur Wi-Fi), Mode C (lentille) : non démarrés — dépendent de
@@ -72,11 +79,11 @@ Dernière mise à jour : 2026-11-05.
   peut casser des dépendances transitives hoistées (vécu deux fois : `chokidar` puis `ajv` manquants
   après un `npm install` lancé depuis le mauvais dossier). Toujours lancer les commandes npm du backend
   depuis la racine du monorepo.
-- **Un guard/provider exporté d'un module (ex. `JwtAuthGuard`) ne suffit pas à rendre ses propres
-  dépendances (ex. `JwtService`) résolubles dans le module consommateur.** Il faut aussi ré-exporter le
-  module qui fournit cette dépendance (ici `JwtModule`) depuis `AuthModule`. Sinon NestJS lève une
-  `UnknownDependenciesException` au démarrage, pas à la compilation — à vérifier à chaque nouveau module
-  qui réutilise `JwtAuthGuard`.
+- **Un guard/provider exporté d'un module (ex. `JwtAuthGuard`, `AdminPermissionGuard`) ne suffit pas à
+  rendre ses propres dépendances résolubles dans le module consommateur.** Il faut aussi ré-exporter le
+  module qui fournit chaque dépendance (`JwtModule` depuis `AuthModule` ; `UsersModule` depuis
+  `RbacModule`). Sinon NestJS lève une `UnknownDependenciesException` au démarrage, pas à la
+  compilation — rencontré deux fois, à vérifier systématiquement pour tout nouveau guard partagé.
 - **Prisma 7 a changé son modèle de configuration** (plus de `datasource.url` dans `schema.prisma` ; la
   CLI lit `prisma.config.ts`, et `PrismaClient` nécessite un driver adapter — `@prisma/adapter-pg` pour
   PostgreSQL). Documenté dans `services/backend/prisma.config.ts` et `src/prisma/prisma.service.ts`.

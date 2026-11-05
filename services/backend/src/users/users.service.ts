@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service.js';
 import type { User } from '../generated/prisma/client.js';
 
@@ -16,5 +16,13 @@ export class UsersService {
 
   createWithPasswordHash(email: string, passwordHash: string): Promise<User> {
     return this.prisma.user.create({ data: { email, passwordHash } });
+  }
+
+  async setAdminRole(userId: string, adminRole: User['adminRole']): Promise<User> {
+    const user = await this.findById(userId);
+    if (!user) {
+      throw new NotFoundException('Utilisateur introuvable.');
+    }
+    return this.prisma.user.update({ where: { id: userId }, data: { adminRole } });
   }
 }

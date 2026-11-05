@@ -10,6 +10,8 @@ import { OrganizationsModule } from './organizations/organizations.module.js';
 import { DevicesModule } from './devices/devices.module.js';
 import { AccessoriesModule } from './accessories/accessories.module.js';
 import { CompatibilityModule } from './compatibility/compatibility.module.js';
+import { RbacModule } from './rbac/rbac.module.js';
+import { AdminModule } from './admin/admin.module.js';
 
 @Module({
   imports: [
@@ -22,6 +24,8 @@ import { CompatibilityModule } from './compatibility/compatibility.module.js';
     DevicesModule,
     AccessoriesModule,
     CompatibilityModule,
+    RbacModule,
+    AdminModule,
   ],
   controllers: [AppController],
   providers: [AppService],

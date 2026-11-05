@@ -1,4 +1,5 @@
 import { Test, TestingModule } from '@nestjs/testing';
+import { NotFoundException } from '@nestjs/common';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { UsersService } from './users.service.js';
 import { PrismaService } from '../prisma/prisma.service.js';
@@ -9,11 +10,12 @@ describe('UsersService', () => {
     user: {
       findUnique: ReturnType<typeof vi.fn>;
       create: ReturnType<typeof vi.fn>;
+      update: ReturnType<typeof vi.fn>;
     };
   };
 
   beforeEach(async () => {
-    prisma = { user: { findUnique: vi.fn(), create: vi.fn() } };
+    prisma = { user: { findUnique: vi.fn(), create: vi.fn(), update: vi.fn() } };
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [UsersService, { provide: PrismaService, useValue: prisma }],
@@ -37,6 +39,29 @@ describe('UsersService', () => {
     await expect(service.createWithPasswordHash('a@b.com', 'hashed')).resolves.toEqual(user);
     expect(prisma.user.create).toHaveBeenCalledWith({
       data: { email: 'a@b.com', passwordHash: 'hashed' },
+    });
+  });
+
+  describe('setAdminRole', () => {
+    it('throws when the user does not exist', async () => {
+      prisma.user.findUnique.mockResolvedValueOnce(null);
+
+      await expect(service.setAdminRole('user-1', 'SUPPORT_AGENT')).rejects.toBeInstanceOf(NotFoundException);
+      expect(prisma.user.update).not.toHaveBeenCalled();
+    });
+
+    it('updates the admin role for an existing user', async () => {
+      prisma.user.findUnique.mockResolvedValueOnce({ id: 'user-1', email: 'a@b.com' });
+      prisma.user.update.mockResolvedValueOnce({ id: 'user-1', adminRole: 'SUPPORT_AGENT' });
+
+      await expect(service.setAdminRole('user-1', 'SUPPORT_AGENT')).resolves.toEqual({
+        id: 'user-1',
+        adminRole: 'SUPPORT_AGENT',
+      });
+      expect(prisma.user.update).toHaveBeenCalledWith({
+        where: { id: 'user-1' },
+        data: { adminRole: 'SUPPORT_AGENT' },
+      });
     });
   });
 });
