@@ -11,11 +11,12 @@ describe('UsersService', () => {
       findUnique: ReturnType<typeof vi.fn>;
       create: ReturnType<typeof vi.fn>;
       update: ReturnType<typeof vi.fn>;
+      findMany: ReturnType<typeof vi.fn>;
     };
   };
 
   beforeEach(async () => {
-    prisma = { user: { findUnique: vi.fn(), create: vi.fn(), update: vi.fn() } };
+    prisma = { user: { findUnique: vi.fn(), create: vi.fn(), update: vi.fn(), findMany: vi.fn() } };
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [UsersService, { provide: PrismaService, useValue: prisma }],
@@ -61,6 +62,32 @@ describe('UsersService', () => {
       expect(prisma.user.update).toHaveBeenCalledWith({
         where: { id: 'user-1' },
         data: { adminRole: 'SUPPORT_AGENT' },
+      });
+    });
+  });
+
+  describe('search', () => {
+    it('filters by email when a query is given', async () => {
+      prisma.user.findMany.mockResolvedValueOnce([]);
+
+      await service.search('alice');
+
+      expect(prisma.user.findMany).toHaveBeenCalledWith({
+        where: { email: { contains: 'alice', mode: 'insensitive' } },
+        orderBy: { createdAt: 'desc' },
+        take: 25,
+      });
+    });
+
+    it('returns the most recent accounts when no query is given', async () => {
+      prisma.user.findMany.mockResolvedValueOnce([]);
+
+      await service.search();
+
+      expect(prisma.user.findMany).toHaveBeenCalledWith({
+        where: undefined,
+        orderBy: { createdAt: 'desc' },
+        take: 25,
       });
     });
   });

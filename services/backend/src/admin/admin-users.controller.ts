@@ -1,4 +1,4 @@
-import { Body, Controller, Param, Patch, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, Param, Patch, Query, UseGuards } from '@nestjs/common';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard.js';
 import { CurrentUser } from '../auth/current-user.decorator.js';
 import type { AuthenticatedUser } from '../auth/jwt-auth.guard.js';
@@ -19,6 +19,19 @@ export class AdminUsersController {
     private readonly usersService: UsersService,
     private readonly auditService: AuditService,
   ) {}
+
+  @Get()
+  @RequirePermission('users', 'read')
+  async search(@Query('email') email?: string) {
+    const users = await this.usersService.search(email);
+    return users.map((user) => ({
+      id: user.id,
+      email: user.email,
+      status: user.status,
+      adminRole: user.adminRole,
+      createdAt: user.createdAt,
+    }));
+  }
 
   @Patch(':id/admin-role')
   @RequirePermission('users', 'approve')

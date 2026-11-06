@@ -4,6 +4,9 @@ import { logoutAction } from "../actions";
 
 const NAV_LINKS = [
   { href: "/", label: "Tableau de bord" },
+  { href: "/users", label: "Comptes" },
+  { href: "/accessories", label: "Accessoires" },
+  { href: "/compatibility", label: "Compatibilité" },
   { href: "/cms/pages", label: "Pages" },
   { href: "/cms/articles", label: "Articles" },
   { href: "/cms/media", label: "Médias" },
@@ -17,10 +20,10 @@ export default async function DashboardLayout({ children }: { children: React.Re
   return (
     <div className="flex min-h-screen flex-col">
       <header className="border-b border-neutral-800">
-        <nav className="mx-auto flex max-w-5xl items-center justify-between px-6 py-4">
-          <div className="flex items-center gap-8">
+        <nav className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-y-2 px-6 py-4">
+          <div className="flex flex-wrap items-center gap-6">
             <span className="text-lg font-semibold tracking-tight">SWVERTEX Admin</span>
-            <ul className="flex gap-6 text-sm text-neutral-300">
+            <ul className="flex flex-wrap gap-5 text-sm text-neutral-300">
               {NAV_LINKS.map((link) => (
                 <li key={link.href}>
                   <Link href={link.href} className="hover:text-white hover:underline">
@@ -40,7 +43,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
           </div>
         </nav>
       </header>
-      <main className="mx-auto w-full max-w-5xl flex-1 px-6 py-10">{children}</main>
+      <main className="mx-auto w-full max-w-6xl flex-1 px-6 py-10">{children}</main>
     </div>
   );
 }

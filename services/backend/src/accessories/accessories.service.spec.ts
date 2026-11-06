@@ -76,6 +76,16 @@ describe('AccessoriesService', () => {
     });
   });
 
+  describe('listAll', () => {
+    it('returns every catalog entry ordered by most recent', async () => {
+      prisma.accessory.findMany.mockResolvedValueOnce([]);
+
+      await service.listAll();
+
+      expect(prisma.accessory.findMany).toHaveBeenCalledWith({ orderBy: { createdAt: 'desc' } });
+    });
+  });
+
   describe('release', () => {
     it('rejects releasing an accessory owned by someone else', async () => {
       prisma.accessory.findUnique.mockResolvedValueOnce({ id: 'acc-1', ownerId: 'user-2' });

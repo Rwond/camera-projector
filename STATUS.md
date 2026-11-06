@@ -116,11 +116,24 @@ Dernière mise à jour : 2026-11-05.
   immédiatement visible via la lecture publique (`GET /cms/pages/fr/accueil`), création d'un article
   en brouillon, enregistrement/suppression d'un média, refus RBAC propre pour un rôle sans accès CMS
   (`TECHNICAL_OPERATOR`).
+- **Admin — Comptes/rôles, Accessoires, Compatibilité** : deux endpoints backend ajoutés pour
+  rendre ces écrans possibles — `GET /admin/users` (recherche par e-mail, ressource `users:read`,
+  ne renvoie jamais `passwordHash`) et `GET /admin/accessories` (catalogue complet, ressource
+  `accessories:read`) ; `/compatibility` lit directement l'endpoint public existant (pas de
+  changement backend nécessaire). `/users` : recherche + formulaire d'attribution de rôle par
+  compte (la mise à jour elle-même reste réservée à `SUPER_ADMIN` par la matrice RBAC).
+  `/accessories` : liste + création de fiche catalogue. `/compatibility` : liste + publication
+  d'un résultat. Vérifié dans le navigateur avec des comptes réels : `/users` refusé pour
+  `TECHNICAL_OPERATOR` (403 propre) mais `/accessories`/`/compatibility` fonctionnent pour ce
+  rôle ; changement de rôle par un `SUPER_ADMIN` confirmé côté backend puis restauré à sa valeur
+  d'origine ; nouvelle fiche accessoire et nouveau résultat de compatibilité visibles
+  immédiatement après création.
 
 ## En cours
 
-- Rien en cours activement — en attente de la prochaine priorité (billing/paiements, étoffer l'admin
-  — gestion des rôles/accessoires/compatibilité —, ou client Flutter).
+- Rien en cours activement — en attente de la prochaine priorité (billing/paiements, ou client
+  Flutter — l'admin couvre désormais toutes les actions backend construites jusqu'ici, à l'exception
+  du billing qui attend les décisions du §18).
 
 ## En attente (bloqué par une décision ou une dépendance)
 
@@ -131,10 +144,9 @@ Dernière mise à jour : 2026-11-05.
   ce worker plus tard (nécessiterait Redis/BullMQ, déjà prévu dans l'architecture mais pas encore câblé).
 - Notifications : aucun transport e-mail/push réel n'est branché (voir ci-dessus) ; aucun
   déclenchement automatique depuis les autres modules (inscription, facturation...) pour l'instant.
-- Admin : connexion/tableau de bord/journal d'audit/support/CMS existent. Il manque encore les
-  écrans pour la gestion des rôles, le catalogue accessoires et la compatibilité, déjà prêts côté
-  backend. Pas de rafraîchissement automatique du jeton expiré (15 min) — l'utilisateur doit se
-  reconnecter manuellement.
+- Admin : tous les écrans prévus pour l'existant backend sont en place (comptes/rôles, accessoires,
+  compatibilité, CMS, support, journal d'audit). Pas de rafraîchissement automatique du jeton expiré
+  (15 min) — l'utilisateur doit se reconnecter manuellement.
 - Client Flutter (`apps/client`) : non démarré.
 - Mode A (module USB-C), Mode B (projecteur Wi-Fi), Mode C (lentille) : non démarrés — dépendent de
   décisions matérielles/commerciales, voir [docs/decisions-a-valider.md](docs/decisions-a-valider.md).

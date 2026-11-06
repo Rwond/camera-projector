@@ -1,4 +1,4 @@
-import { Body, Controller, Post, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, Post, UseGuards } from '@nestjs/common';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard.js';
 import { CurrentUser } from '../auth/current-user.decorator.js';
 import type { AuthenticatedUser } from '../auth/jwt-auth.guard.js';
@@ -15,6 +15,12 @@ export class AdminAccessoriesController {
     private readonly accessoriesService: AccessoriesService,
     private readonly auditService: AuditService,
   ) {}
+
+  @Get()
+  @RequirePermission('accessories', 'read')
+  list() {
+    return this.accessoriesService.listAll();
+  }
 
   @Post()
   @RequirePermission('accessories', 'create')

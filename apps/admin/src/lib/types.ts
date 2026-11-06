@@ -84,3 +84,55 @@ export interface Media {
   sizeBytes: number;
   createdAt: string;
 }
+
+export const ADMIN_ROLES = [
+  "SUPER_ADMIN",
+  "PRODUCT_MANAGER",
+  "SUPPORT_AGENT",
+  "FINANCE_MANAGER",
+  "TECHNICAL_OPERATOR",
+  "CONTENT_MANAGER",
+  "READ_ONLY_AUDITOR",
+] as const;
+export type AdminRole = (typeof ADMIN_ROLES)[number];
+
+export interface AdminUser {
+  id: string;
+  email: string;
+  status: string;
+  adminRole: AdminRole | null;
+  createdAt: string;
+}
+
+export type AccessorySaleStatus = "IN_STOCK" | "SOLD" | "RETURNED";
+export type AccessoryStatus = "ACTIVE" | "DEFECTIVE" | "RETIRED";
+
+export interface Accessory {
+  id: string;
+  serialNumber: string;
+  model: string;
+  firmwareVersion: string | null;
+  batchNumber: string | null;
+  warrantyExpiresAt: string | null;
+  ownerId: string | null;
+  saleStatus: AccessorySaleStatus;
+  status: AccessoryStatus;
+  createdAt: string;
+}
+
+export type ProjectionMode = "MODE_A_USB_C" | "MODE_B_WIRELESS" | "MODE_C_LENS" | "CAMERA_SHARE" | "SCREEN_SHARE";
+
+export type CompatibilityResult = "UNTESTED" | "IN_TEST" | "VALIDATED" | "PARTIAL" | "NOT_COMPATIBLE" | "RETIRED";
+
+export interface CompatibilityRecord {
+  id: string;
+  deviceModel: string;
+  accessoryModel: string | null;
+  osName: string;
+  osVersion: string | null;
+  mode: ProjectionMode;
+  feature: string;
+  result: CompatibilityResult;
+  testedVersion: string | null;
+  testedAt: string | null;
+}

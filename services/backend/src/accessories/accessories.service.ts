@@ -14,10 +14,7 @@ export interface CatalogEntryInput {
 export class AccessoriesService {
   constructor(private readonly prisma: PrismaService) {}
 
-  /**
-   * Création d'une fiche accessoire en stock. Réservé à l'administration (§7.5 du cahier des
-   * charges) — pas encore exposé via un contrôleur HTTP tant que le RBAC admin n'existe pas.
-   */
+  /** Création d'une fiche accessoire en stock. Réservé à l'administration (§7.5). */
   async registerCatalogEntry(input: CatalogEntryInput): Promise<Accessory> {
     const existing = await this.prisma.accessory.findUnique({ where: { serialNumber: input.serialNumber } });
     if (existing) {
@@ -52,6 +49,11 @@ export class AccessoriesService {
 
   listForOwner(ownerId: string): Promise<Accessory[]> {
     return this.prisma.accessory.findMany({ where: { ownerId } });
+  }
+
+  /** Vue catalogue complète pour l'administration (§7.5). */
+  listAll(): Promise<Accessory[]> {
+    return this.prisma.accessory.findMany({ orderBy: { createdAt: 'desc' } });
   }
 
   async release(accessoryId: string, ownerId: string): Promise<Accessory> {
