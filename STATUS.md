@@ -107,11 +107,20 @@ Dernière mise à jour : 2026-11-05.
   (`revalidatePath` après chaque mutation). Vérifié dans le navigateur avec un compte `SUPPORT_AGENT`
   réel : liste, détail, changement de statut confirmé côté backend, ajout d'un message visible
   immédiatement après soumission.
+- **Admin — CMS (§9)** : `/cms/pages` et `/cms/articles` (liste, création, édition, publier/
+  dépublier/programmer/supprimer) partagent un composant `BlockEditor` réutilisable (titre, texte,
+  appel à l'action, image — ajout/suppression/réordonnancement de blocs, sérialisés en JSON dans un
+  champ caché de formulaire). `/cms/media` : catalogue de métadonnées (enregistrement, suppression).
+  Vérifié dans le navigateur avec un compte `CONTENT_MANAGER` réel : l'éditeur charge le contenu
+  existant d'une page déjà publiée, un bloc ajouté et enregistré est bien persisté côté backend et
+  immédiatement visible via la lecture publique (`GET /cms/pages/fr/accueil`), création d'un article
+  en brouillon, enregistrement/suppression d'un média, refus RBAC propre pour un rôle sans accès CMS
+  (`TECHNICAL_OPERATOR`).
 
 ## En cours
 
 - Rien en cours activement — en attente de la prochaine priorité (billing/paiements, étoffer l'admin
-  — gestion des rôles/accessoires/compatibilité/CMS —, ou client Flutter).
+  — gestion des rôles/accessoires/compatibilité —, ou client Flutter).
 
 ## En attente (bloqué par une décision ou une dépendance)
 
@@ -122,10 +131,10 @@ Dernière mise à jour : 2026-11-05.
   ce worker plus tard (nécessiterait Redis/BullMQ, déjà prévu dans l'architecture mais pas encore câblé).
 - Notifications : aucun transport e-mail/push réel n'est branché (voir ci-dessus) ; aucun
   déclenchement automatique depuis les autres modules (inscription, facturation...) pour l'instant.
-- Admin : connexion/tableau de bord/journal d'audit/support existent. Il manque encore les écrans
-  pour la gestion des rôles, le catalogue accessoires, la compatibilité et le CMS
-  (pages/articles/médias), toutes déjà prêtes côté backend. Pas de rafraîchissement automatique du
-  jeton expiré (15 min) — l'utilisateur doit se reconnecter manuellement.
+- Admin : connexion/tableau de bord/journal d'audit/support/CMS existent. Il manque encore les
+  écrans pour la gestion des rôles, le catalogue accessoires et la compatibilité, déjà prêts côté
+  backend. Pas de rafraîchissement automatique du jeton expiré (15 min) — l'utilisateur doit se
+  reconnecter manuellement.
 - Client Flutter (`apps/client`) : non démarré.
 - Mode A (module USB-C), Mode B (projecteur Wi-Fi), Mode C (lentille) : non démarrés — dépendent de
   décisions matérielles/commerciales, voir [docs/decisions-a-valider.md](docs/decisions-a-valider.md).

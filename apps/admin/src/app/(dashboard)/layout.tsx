@@ -4,6 +4,9 @@ import { logoutAction } from "../actions";
 
 const NAV_LINKS = [
   { href: "/", label: "Tableau de bord" },
+  { href: "/cms/pages", label: "Pages" },
+  { href: "/cms/articles", label: "Articles" },
+  { href: "/cms/media", label: "Médias" },
   { href: "/support", label: "Support" },
   { href: "/audit-log", label: "Journal d'audit" },
 ];
