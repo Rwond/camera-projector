@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'core/api_client.dart';
 import 'core/token_storage.dart';
@@ -5,6 +6,11 @@ import 'features/auth/auth_service.dart';
 import 'features/auth/login_screen.dart';
 import 'features/devices/devices_service.dart';
 import 'features/home/home_screen.dart';
+import 'features/projection/projection_screen.dart';
+
+/// Build de test matériel : ouvre directement l'écran de projection, sans backend.
+/// Activé uniquement en debug avec --dart-define=LAB_MODE=true.
+const bool _labMode = bool.fromEnvironment('LAB_MODE');
 
 class SwvertexApp extends StatefulWidget {
   const SwvertexApp({super.key});
@@ -30,22 +36,29 @@ class _SwvertexAppState extends State<SwvertexApp> {
     return MaterialApp(
       title: 'SWVERTEX CAMERA PROJECTOR',
       theme: ThemeData(colorSchemeSeed: Colors.indigo, useMaterial3: true),
-      home: FutureBuilder<bool>(
-        future: _loggedInFuture,
-        builder: (context, snapshot) {
-          if (snapshot.connectionState != ConnectionState.done) {
-            return const Scaffold(body: Center(child: CircularProgressIndicator()));
-          }
-          if (snapshot.data == true) {
-            return HomeScreen(
-              authService: _authService,
-              devicesService: _devicesService,
-              onLoggedOut: _refreshAuthState,
-            );
-          }
-          return LoginScreen(authService: _authService, onLoggedIn: _refreshAuthState);
-        },
-      ),
+      home: kDebugMode && _labMode
+          ? const ProjectionScreen()
+          : FutureBuilder<bool>(
+              future: _loggedInFuture,
+              builder: (context, snapshot) {
+                if (snapshot.connectionState != ConnectionState.done) {
+                  return const Scaffold(
+                    body: Center(child: CircularProgressIndicator()),
+                  );
+                }
+                if (snapshot.data == true) {
+                  return HomeScreen(
+                    authService: _authService,
+                    devicesService: _devicesService,
+                    onLoggedOut: _refreshAuthState,
+                  );
+                }
+                return LoginScreen(
+                  authService: _authService,
+                  onLoggedIn: _refreshAuthState,
+                );
+              },
+            ),
     );
   }
 }

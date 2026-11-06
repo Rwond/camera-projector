@@ -143,8 +143,14 @@ Dernière mise à jour : 2026-11-05.
 
 ## En cours
 
-- Rien en cours activement — en attente de la prochaine priorité : billing/paiements (bloqué par le
-  §18), ou les modules natifs du client Flutter (capture caméra/écran, USB-C, découverte Wi-Fi).
+- **Prototype de projection labo (Android)** : capture d'écran via `MediaProjection` + serveur MJPEG
+  local, écran Flutter « Tester la projection (labo) » et mode `LAB_MODE=true` pour tester sans
+  backend. Compilé (`flutter build apk --debug`), `flutter analyze` et `flutter test` passent ;
+  l'installation et le test bout en bout sur le SM-A165F restent à refaire (téléphone déconnecté
+  pendant la session). Ce prototype ne remplace pas le mode B final (Miracast/DLNA non implémentés).
+- Rien d'autre en cours activement — en attente de la prochaine priorité : billing/paiements (bloqué
+  par le §18), ou les modules natifs du client Flutter (capture caméra/écran, USB-C, découverte
+  Wi-Fi).
 
 ## En attente (bloqué par une décision ou une dépendance)
 

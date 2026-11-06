@@ -35,6 +35,35 @@ Puis ouvrir `http://localhost:3004`. Le port 3004 est déjà autorisé dans `COR
 service worker du premier peut rester en cache sur cette origine et servir du contenu périmé — en
 cas de doute, changer de port ou vider le cache du site avant de retester.
 
+## Prototype de projection (labo, Android)
+
+Premier prototype du mode B : capture de l'écran Android via `MediaProjection`, encodage JPEG et
+diffusion MJPEG sur le réseau local. Aucun backend ni matériel projecteur n'est nécessaire.
+
+```bash
+flutter build apk --debug --dart-define=LAB_MODE=true
+adb install -r build/app/outputs/flutter-apk/app-debug.apk
+```
+
+`LAB_MODE=true` ouvre directement l'écran de test, sans authentification (uniquement en build
+debug). Sans ce flag, l'écran reste accessible après connexion via le bouton
+« Tester la projection (labo) » de l'accueil.
+
+Utilisation :
+
+1. Connecter le téléphone et le récepteur (PC/TV) au même réseau Wi-Fi.
+2. Démarrer la capture et accepter la demande Android.
+3. Ouvrir l'adresse affichée dans un navigateur sur le récepteur, par exemple
+   `http://192.168.1.23:8080/`.
+
+En USB uniquement : `adb reverse tcp:8080 tcp:8080`, puis ouvrir `http://localhost:8080/` sur le PC.
+
+Limites : Android uniquement, sans son, environ 10 images/s en JPEG 720p. Ce n'est **pas** encore
+le mode B final : Miracast/DLNA et le protocole des projecteurs Wi-Fi restent à définir
+(`docs/decisions-a-valider.md`). Le code natif se trouve dans
+`android/app/src/main/kotlin/com/swvertex/swvertex_camera_projector/ScreenStreamService.kt` et
+l'écran Flutter dans `lib/features/projection/`.
+
 ## Stockage et sécurité
 
 Les jetons d'accès/rafraîchissement sont stockés via `flutter_secure_storage` (Keychain/Keystore/
