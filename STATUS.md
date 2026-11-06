@@ -128,12 +128,23 @@ Dernière mise à jour : 2026-11-05.
   rôle ; changement de rôle par un `SUPER_ADMIN` confirmé côté backend puis restauré à sa valeur
   d'origine ; nouvelle fiche accessoire et nouveau résultat de compatibilité visibles
   immédiatement après création.
+- **Client Flutter (`apps/client`)** : projet unique multi-cible (Android/iOS/Windows/macOS/Web,
+  §4-5 du cahier des charges) scaffoldé. Authentification réelle (connexion/inscription, jetons
+  stockés via `flutter_secure_storage` — Keychain/Keystore/DPAPI/WebCrypto selon la plateforme,
+  jamais en clair) et écran "Mes appareils" (liste, association via un formulaire, dissociation),
+  consommant directement l'API du backend (`ApiClient` générique, pas de mock). `flutter analyze`
+  et `flutter test` passent. Vérifié dans un vrai navigateur (build `flutter build web` servi
+  statiquement — `flutter run -d chrome` attend une connexion de débogage websocket incompatible
+  avec un navigateur piloté à distance, documenté dans `apps/client/README.md`) : inscription,
+  doublon d'e-mail refusé avec le bon message, connexion, liste d'appareils vide puis peuplée après
+  association réelle (confirmée côté backend), dissociation reflétée immédiatement, déconnexion.
+  Aucun module natif (capture caméra/écran, USB-C, découverte Wi-Fi) n'est encore développé — ce
+  sera le prochain chantier matériel/logiciel, derrière des canaux de plateforme par OS.
 
 ## En cours
 
-- Rien en cours activement — en attente de la prochaine priorité (billing/paiements, ou client
-  Flutter — l'admin couvre désormais toutes les actions backend construites jusqu'ici, à l'exception
-  du billing qui attend les décisions du §18).
+- Rien en cours activement — en attente de la prochaine priorité : billing/paiements (bloqué par le
+  §18), ou les modules natifs du client Flutter (capture caméra/écran, USB-C, découverte Wi-Fi).
 
 ## En attente (bloqué par une décision ou une dépendance)
 
@@ -147,7 +158,9 @@ Dernière mise à jour : 2026-11-05.
 - Admin : tous les écrans prévus pour l'existant backend sont en place (comptes/rôles, accessoires,
   compatibilité, CMS, support, journal d'audit). Pas de rafraîchissement automatique du jeton expiré
   (15 min) — l'utilisateur doit se reconnecter manuellement.
-- Client Flutter (`apps/client`) : non démarré.
+- Client Flutter : seuls l'authentification et la gestion des appareils existent. Tout le reste
+  (bibliothèque de contenus, contrôle de session, et surtout les trois modes de projection) reste à
+  faire, et dépend des modules natifs par plateforme.
 - Mode A (module USB-C), Mode B (projecteur Wi-Fi), Mode C (lentille) : non démarrés — dépendent de
   décisions matérielles/commerciales, voir [docs/decisions-a-valider.md](docs/decisions-a-valider.md).
 
@@ -160,6 +173,14 @@ Dernière mise à jour : 2026-11-05.
 
 ## Risques techniques identifiés
 
+- **`flutter run -d chrome`/`-d web-server` en mode debug ne fonctionne pas avec un navigateur piloté
+  à distance** (ex. un agent qui ne peut pas établir la connexion de débogage websocket que Flutter
+  attend) : le process reste bloqué sur "Waiting for connection from debug service". Pour vérifier le
+  client web en dehors d'un vrai poste de développement, utiliser `flutter build web` puis servir
+  `build/web` avec un serveur statique quelconque. Ne jamais réutiliser le même port pour un essai en
+  mode debug puis un build statique sur la même origine : le service worker du premier reste parfois
+  en cache et sert du contenu périmé même après un rechargement — changer de port si le comportement
+  observé ne correspond pas au code actuel.
 - **Le disque C: de ce poste est quasiment plein** (quelques Go libres seulement une fois le cache
   npm et le dossier Temp vidés). Le plus gros poste identifié est le disque virtuel WSL2 de Docker
   Desktop (~59 Go, ne se réduit jamais tout seul même après suppression d'images/conteneurs — il faut
