@@ -64,6 +64,20 @@ le mode B final : Miracast/DLNA et le protocole des projecteurs Wi-Fi restent à
 `android/app/src/main/kotlin/com/swvertex/swvertex_camera_projector/ScreenStreamService.kt` et
 l'écran Flutter dans `lib/features/projection/`.
 
+## Prototype de projection (labo, lentille optique)
+
+Second prototype, multiplateforme cette fois : affiche une image choisie (ou un motif
+de calibrage à défaut) en plein écran, orientée selon le montage optique de
+l'accessoire, et pousse la luminosité au maximum quand la plateforme le permet.
+Aucun matériel requis pour le tester (le téléphone n'est pas nécessaire) — accessible
+depuis l'accueil via « Projection par lentille (prototype) ».
+
+Limites : la lentille elle-même (boîtier, distance focale) n'est ni fournie ni
+spécifiée par ce projet (voir `docs/decisions-a-valider.md`) ; l'orientation
+(aucun/horizontal/vertical/180°) est donc réglable manuellement en attendant un choix
+d'accessoire définitif. La luminosité logicielle maximale n'est pas disponible sur
+toutes les plateformes (ex. web) : l'écran reste utilisable sans elle.
+
 ## Stockage et sécurité
 
 Les jetons d'accès/rafraîchissement sont stockés via `flutter_secure_storage` (Keychain/Keystore/
@@ -76,6 +90,7 @@ lib/core/            Client HTTP (ApiClient) et stockage sécurisé des jetons (
 lib/features/auth/    Connexion, inscription, AuthService
 lib/features/devices/ Liste/association/dissociation des appareils du compte
 lib/features/home/    Écran d'accueil post-connexion
+lib/features/lens/    Prototype du mode C (lentille) : affichage plein écran + luminosité
 ```
 
 Tout ce qui est spécifique à l'OS (capture caméra/écran, USB-C, découverte réseau Wi-Fi) devra

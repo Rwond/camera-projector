@@ -143,14 +143,21 @@ Dernière mise à jour : 2026-11-05.
 
 ## En cours
 
-- **Prototype de projection labo (Android)** : capture d'écran via `MediaProjection` + serveur MJPEG
-  local, écran Flutter « Tester la projection (labo) » et mode `LAB_MODE=true` pour tester sans
-  backend. Compilé (`flutter build apk --debug`), `flutter analyze` et `flutter test` passent ;
-  l'installation et le test bout en bout sur le SM-A165F restent à refaire (téléphone déconnecté
-  pendant la session). Ce prototype ne remplace pas le mode B final (Miracast/DLNA non implémentés).
+- **Prototype de projection labo (Android, mode B)** : capture d'écran via `MediaProjection` +
+  serveur MJPEG local, écran Flutter « Tester la projection (labo) » et mode `LAB_MODE=true` pour
+  tester sans backend. Compilé (`flutter build apk --debug`), `flutter analyze` et `flutter test`
+  passent ; l'installation et le test bout en bout sur le SM-A165F restent à refaire (téléphone
+  déconnecté pendant la session). Ce prototype ne remplace pas le mode B final (Miracast/DLNA non
+  implémentés).
+- **Prototype de projection par lentille (mode C, multiplateforme)** : écran « Projection par
+  lentille (prototype) » — affiche une image choisie ou un motif de calibrage en plein écran, avec
+  4 orientations (aucun/horizontal/vertical/180°) en attendant le choix définitif du montage
+  optique, et pousse la luminosité au maximum via `screen_brightness` quand la plateforme le
+  permet. Ne nécessite aucun matériel ni le téléphone de test pour être vérifié. `flutter analyze`
+  et `flutter test` passent.
 - Rien d'autre en cours activement — en attente de la prochaine priorité : billing/paiements (bloqué
-  par le §18), ou les modules natifs du client Flutter (capture caméra/écran, USB-C, découverte
-  Wi-Fi).
+  par le §18), le mode A (module USB-C, bloqué par le §18), ou le câblage réel du mode B/C derrière
+  un accessoire physique une fois les décisions matérielles prises.
 
 ## En attente (bloqué par une décision ou une dépendance)
 
@@ -164,11 +171,13 @@ Dernière mise à jour : 2026-11-05.
 - Admin : tous les écrans prévus pour l'existant backend sont en place (comptes/rôles, accessoires,
   compatibilité, CMS, support, journal d'audit). Pas de rafraîchissement automatique du jeton expiré
   (15 min) — l'utilisateur doit se reconnecter manuellement.
-- Client Flutter : seuls l'authentification et la gestion des appareils existent. Tout le reste
-  (bibliothèque de contenus, contrôle de session, et surtout les trois modes de projection) reste à
-  faire, et dépend des modules natifs par plateforme.
-- Mode A (module USB-C), Mode B (projecteur Wi-Fi), Mode C (lentille) : non démarrés — dépendent de
-  décisions matérielles/commerciales, voir [docs/decisions-a-valider.md](docs/decisions-a-valider.md).
+- Client Flutter : l'authentification, la gestion des appareils, et deux prototypes labo (mode B
+  Android, mode C lentille) existent. La bibliothèque de contenus, le contrôle de session, et les
+  implémentations finales des trois modes de projection restent à faire.
+- Mode A (module USB-C) : non démarré — dépend des décisions matérielles/commerciales du §18.
+- Mode B (projecteur Wi-Fi) et Mode C (lentille) : prototypes labo en place (voir « En cours »),
+  mais les implémentations finales (Miracast/DLNA pour B, accessoire optique réel pour C) dépendent
+  des mêmes décisions, voir [docs/decisions-a-valider.md](docs/decisions-a-valider.md).
 
 ## Non testé
 
@@ -176,6 +185,10 @@ Dernière mise à jour : 2026-11-05.
   mocks + une vérification manuelle ponctuelle du serveur réel.
 - Comportement sous charge, scénarios de perte réseau, sécurité (CSRF/CORS/rate limiting) : pas encore
   implémentés ni testés.
+- Prototype lentille (mode C) : vérifié par `flutter analyze`/`flutter test` et en navigateur
+  (motif de calibrage, sélection d'image, orientations, luminosité qui échoue silencieusement sur
+  web) ; jamais projeté à travers une vraie lentille optique — aucun accessoire disponible dans cet
+  environnement, voir docs/decisions-a-valider.md.
 
 ## Risques techniques identifiés
 

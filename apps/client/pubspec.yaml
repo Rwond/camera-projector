@@ -37,6 +37,7 @@ dependencies:
   http: ^1.6.0
   flutter_secure_storage: ^11.2.0
   screen_brightness: ^2.1.11
+  file_picker: ^13.3.2
 
 dev_dependencies:
   flutter_test:

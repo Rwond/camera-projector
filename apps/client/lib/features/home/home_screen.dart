@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../auth/auth_service.dart';
 import '../devices/devices_screen.dart';
 import '../devices/devices_service.dart';
+import '../lens/lens_projection_screen.dart';
 import '../projection/projection_screen.dart';
 
 class HomeScreen extends StatelessWidget {
@@ -59,6 +60,18 @@ class HomeScreen extends StatelessWidget {
               onPressed: () {
                 Navigator.of(context).push(
                   MaterialPageRoute(builder: (_) => const ProjectionScreen()),
+                );
+              },
+            ),
+            const SizedBox(height: 12),
+            OutlinedButton.icon(
+              icon: const Icon(Icons.wb_sunny_outlined),
+              label: const Text('Projection par lentille (prototype)'),
+              onPressed: () {
+                Navigator.of(context).push(
+                  MaterialPageRoute(
+                    builder: (_) => const LensProjectionScreen(),
+                  ),
                 );
               },
             ),
