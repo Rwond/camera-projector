@@ -101,11 +101,17 @@ Dernière mise à jour : 2026-11-05.
   crash) quand le rôle ne donne pas la permission. Déconnexion qui efface les cookies. Build et lint
   passent ; vérifié dans le navigateur : connexion, redirection si non connecté, affichage réel du
   journal d'audit, refus RBAC propre pour un compte sans rôle, déconnexion puis re-redirection.
+- **Admin — Support (§6.6)** : liste des tickets (`/support`), détail avec tous les messages y
+  compris les notes internes (mises en évidence visuellement, jamais envoyées au demandeur côté
+  public), formulaire de réponse/note interne et mise à jour du statut/priorité, via Server Actions
+  (`revalidatePath` après chaque mutation). Vérifié dans le navigateur avec un compte `SUPPORT_AGENT`
+  réel : liste, détail, changement de statut confirmé côté backend, ajout d'un message visible
+  immédiatement après soumission.
 
 ## En cours
 
 - Rien en cours activement — en attente de la prochaine priorité (billing/paiements, étoffer l'admin
-  — gestion des accessoires/compatibilité/CMS/support —, ou client Flutter).
+  — gestion des rôles/accessoires/compatibilité/CMS —, ou client Flutter).
 
 ## En attente (bloqué par une décision ou une dépendance)
 
@@ -116,10 +122,10 @@ Dernière mise à jour : 2026-11-05.
   ce worker plus tard (nécessiterait Redis/BullMQ, déjà prévu dans l'architecture mais pas encore câblé).
 - Notifications : aucun transport e-mail/push réel n'est branché (voir ci-dessus) ; aucun
   déclenchement automatique depuis les autres modules (inscription, facturation...) pour l'instant.
-- Admin : seules les pages connexion/tableau de bord/journal d'audit existent. Il manque les écrans
-  pour toutes les actions déjà prêtes côté backend (gestion des rôles, catalogue accessoires,
-  compatibilité, CMS pages/articles/médias, tickets support, notifications). Pas de rafraîchissement
-  automatique du jeton expiré (15 min) — l'utilisateur doit se reconnecter manuellement.
+- Admin : connexion/tableau de bord/journal d'audit/support existent. Il manque encore les écrans
+  pour la gestion des rôles, le catalogue accessoires, la compatibilité et le CMS
+  (pages/articles/médias), toutes déjà prêtes côté backend. Pas de rafraîchissement automatique du
+  jeton expiré (15 min) — l'utilisateur doit se reconnecter manuellement.
 - Client Flutter (`apps/client`) : non démarré.
 - Mode A (module USB-C), Mode B (projecteur Wi-Fi), Mode C (lentille) : non démarrés — dépendent de
   décisions matérielles/commerciales, voir [docs/decisions-a-valider.md](docs/decisions-a-valider.md).
