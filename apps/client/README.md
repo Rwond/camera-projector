@@ -82,9 +82,10 @@ navigateur) et affichage (`mjpeg_viewer_screen.dart`).
 Limites, honnêtement : **Wi-Fi local uniquement**. Ni Bluetooth ni câble USB ne sont implémentés —
 chacun demanderait un module natif par plateforme (API Bluetooth Classic très différentes entre
 Android/Windows/macOS, mode accessoire USB côté hôte...), un chantier à part entière non entamé ici
-et de toute façon dépendant des décisions encore ouvertes dans `docs/decisions-a-valider.md`. La
-découverte réseau n'a été vérifiée qu'en boucle locale (tests automatisés) : jamais testée entre deux
-appareils physiques séparés dans cet environnement.
+et de toute façon dépendant des décisions encore ouvertes dans `docs/decisions-a-valider.md`.
+
+Vérifié pour de vrai entre un téléphone Android et un PC Windows sur le même réseau Wi-Fi :
+découverte, demande d'autorisation et affichage du flux sans navigateur fonctionnent bout en bout.
 
 ## Prototype de projection (labo, lentille optique)
 

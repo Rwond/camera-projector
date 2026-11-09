@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../lens/lens_projection_screen.dart';
 import '../projection/projection_screen.dart';
+import '../projection/receiver_screen.dart';
 
 /// Accueil des builds labo : donne un accès direct aux prototypes B et C
 /// sans passer par l'authentification ni par l'écran d'accueil normal.
@@ -56,6 +57,18 @@ class LabHomeScreen extends StatelessWidget {
                   },
                   icon: const Icon(Icons.wb_sunny_outlined),
                   label: const Text('Mode C — projection par lentille'),
+                ),
+                const SizedBox(height: 12),
+                OutlinedButton.icon(
+                  onPressed: () {
+                    Navigator.of(context).push(
+                      MaterialPageRoute(
+                        builder: (_) => const ReceiverScreen(),
+                      ),
+                    );
+                  },
+                  icon: const Icon(Icons.wifi_tethering),
+                  label: const Text('Recevoir une projection (connexion directe)'),
                 ),
                 const SizedBox(height: 24),
                 Card(

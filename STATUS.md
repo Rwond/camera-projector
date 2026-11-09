@@ -146,9 +146,9 @@ Dernière mise à jour : 2026-11-05.
 - **Prototype de projection labo (Android, mode B)** : capture d'écran via `MediaProjection` +
   serveur MJPEG local, écran Flutter « Tester la projection (labo) » et mode `LAB_MODE=true` pour
   tester sans backend. Compilé (`flutter build apk --debug`), `flutter analyze` et `flutter test`
-  passent ; l'installation et le test bout en bout sur le SM-A165F restent à refaire (téléphone
-  déconnecté pendant la session). Ce prototype ne remplace pas le mode B final (Miracast/DLNA non
-  implémentés).
+  passent. **Testé pour de vrai sur un téléphone physique (modèle Z2453, Android, armeabi-v7a)** :
+  capture démarrée et autorisation Android acceptée avec succès. Ce prototype ne remplace pas le
+  mode B final (Miracast/DLNA non implémentés).
 - **Prototype de projection par lentille (mode C, multiplateforme)** : écran « Projection par
   lentille (prototype) » — affiche une image choisie ou un motif de calibrage en plein écran, avec
   4 orientations (aucun/horizontal/vertical/180°) en attendant le choix définitif du montage
@@ -162,9 +162,11 @@ Dernière mise à jour : 2026-11-05.
   Écrans « Recevoir une projection (labo) » (récepteur) et section « Connexion directe » de l'écran
   mode B (émetteur). `flutter analyze` et `flutter test` passent, y compris des tests d'intégration
   avec de vraies sockets en boucle locale (découverte, appairage accepter/refuser/expiration,
-  parsing MJPEG, bout en bout écran récepteur). **Wi-Fi local uniquement** : ni Bluetooth ni câble
-  USB ne sont implémentés (chacun demanderait un module natif par plateforme, non construit ici) ;
-  jamais vérifié entre deux appareils physiques séparés (seulement en boucle locale 127.0.0.1).
+  parsing MJPEG, bout en bout écran récepteur). **Vérifié pour de vrai entre deux appareils
+  physiques séparés** (téléphone Android ↔ PC Windows sur le même Wi-Fi) : découverte, demande
+  d'autorisation et affichage du flux sans navigateur confirmés bout en bout. **Wi-Fi local
+  uniquement** : ni Bluetooth ni câble USB ne sont implémentés (chacun demanderait un module natif
+  par plateforme, non construit ici).
 - Rien d'autre en cours activement — en attente de la prochaine priorité : billing/paiements (bloqué
   par le §18), le mode A (module USB-C, bloqué par le §18), ou le câblage réel du mode B/C derrière
   un accessoire physique une fois les décisions matérielles prises.
@@ -199,11 +201,6 @@ Dernière mise à jour : 2026-11-05.
   (motif de calibrage, sélection d'image, orientations, luminosité qui échoue silencieusement sur
   web) ; jamais projeté à travers une vraie lentille optique — aucun accessoire disponible dans cet
   environnement, voir docs/decisions-a-valider.md.
-- Connexion directe (découverte Wi-Fi + appairage) : la logique réseau est testée en boucle locale
-  (127.0.0.1), jamais entre deux appareils physiques sur un vrai réseau Wi-Fi domestique — la
-  diffusion UDP peut se comporter différemment selon le routeur/pare-feu (isolation des clients
-  Wi-Fi, blocage du broadcast...), non vérifiable sans deux machines réelles.
-
 ## Risques techniques identifiés
 
 - **`flutter run -d chrome`/`-d web-server` en mode debug ne fonctionne pas avec un navigateur piloté

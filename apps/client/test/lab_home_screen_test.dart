@@ -9,6 +9,10 @@ void main() {
 
     expect(find.text('Mode B — écran vers navigateur'), findsOneWidget);
     expect(find.text('Mode C — projection par lentille'), findsOneWidget);
+    expect(
+      find.text('Recevoir une projection (connexion directe)'),
+      findsOneWidget,
+    );
   });
 
   testWidgets('le bouton mode C ouvre l’écran lentille', (tester) async {
