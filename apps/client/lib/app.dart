@@ -6,7 +6,8 @@ import 'features/auth/auth_service.dart';
 import 'features/auth/login_screen.dart';
 import 'features/devices/devices_service.dart';
 import 'features/home/home_screen.dart';
-import 'features/projection/projection_screen.dart';
+import 'features/lab/lab_home_screen.dart';
+import 'theme/app_theme.dart';
 
 /// Build de test matériel : ouvre directement l'écran de projection, sans backend.
 /// Activé uniquement en debug avec --dart-define=LAB_MODE=true.
@@ -35,9 +36,10 @@ class _SwvertexAppState extends State<SwvertexApp> {
   Widget build(BuildContext context) {
     return MaterialApp(
       title: 'SWVERTEX CAMERA PROJECTOR',
-      theme: ThemeData(colorSchemeSeed: Colors.indigo, useMaterial3: true),
+      debugShowCheckedModeBanner: false,
+      theme: buildAppTheme(),
       home: kDebugMode && _labMode
-          ? const ProjectionScreen()
+          ? const LabHomeScreen()
           : FutureBuilder<bool>(
               future: _loggedInFuture,
               builder: (context, snapshot) {
