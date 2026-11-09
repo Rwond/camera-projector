@@ -4,6 +4,7 @@ import '../devices/devices_screen.dart';
 import '../devices/devices_service.dart';
 import '../lens/lens_projection_screen.dart';
 import '../projection/projection_screen.dart';
+import '../projection/receiver_screen.dart';
 
 class HomeScreen extends StatelessWidget {
   const HomeScreen({
@@ -72,6 +73,16 @@ class HomeScreen extends StatelessWidget {
                   MaterialPageRoute(
                     builder: (_) => const LensProjectionScreen(),
                   ),
+                );
+              },
+            ),
+            const SizedBox(height: 12),
+            OutlinedButton.icon(
+              icon: const Icon(Icons.wifi_tethering),
+              label: const Text('Recevoir une projection (labo)'),
+              onPressed: () {
+                Navigator.of(context).push(
+                  MaterialPageRoute(builder: (_) => const ReceiverScreen()),
                 );
               },
             ),

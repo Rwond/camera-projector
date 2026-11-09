@@ -1,9 +1,13 @@
 import 'dart:async';
+import 'dart:io';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
+import '../../core/device_name.dart';
+import 'discovery_service.dart';
+import 'pairing_service.dart';
 import 'projection_service.dart';
 
 /// Écran de test "labo" du mode B : capture l'écran Android et le diffuse en MJPEG
@@ -13,12 +17,25 @@ class ProjectionScreen extends StatefulWidget {
     super.key,
     this.service = const ProjectionService(),
     this.isAndroidOverride,
+    this.pairingClient = const PairingClient(),
+    this.enableScanning = true,
+    this.receiversOverride,
   });
 
   final ProjectionService service;
 
   /// Permet aux tests de simuler Android sans toucher aux variables de debug globales.
   final bool? isAndroidOverride;
+
+  final PairingClient pairingClient;
+
+  /// Désactivé dans les tests : la découverte UDP réelle dépend du réseau de
+  /// la machine qui exécute la suite.
+  final bool enableScanning;
+
+  /// Liste de récepteurs à afficher telle quelle (tests), à la place de la
+  /// découverte réseau réelle.
+  final List<DiscoveredReceiver>? receiversOverride;
 
   @override
   State<ProjectionScreen> createState() => _ProjectionScreenState();
@@ -28,6 +45,13 @@ class _ProjectionScreenState extends State<ProjectionScreen> {
   ProjectionStatus? _status;
   String? _error;
   bool _busy = false;
+
+  ReceiverScanner? _scanner;
+  StreamSubscription<List<DiscoveredReceiver>>? _scanSubscription;
+  List<DiscoveredReceiver> _receivers = const [];
+  DiscoveredReceiver? _connectingTo;
+  String? _connectError;
+  DiscoveredReceiver? _connectedTo;
 
   bool get _isAndroid =>
       widget.isAndroidOverride ??
@@ -41,6 +65,61 @@ class _ProjectionScreenState extends State<ProjectionScreen> {
     if (_isAndroid) {
       unawaited(_refreshStatus());
     }
+    if (widget.receiversOverride != null) {
+      _receivers = widget.receiversOverride!;
+    } else if (widget.enableScanning) {
+      unawaited(_startScanning());
+    }
+  }
+
+  Future<void> _startScanning() async {
+    final scanner = ReceiverScanner();
+    _scanner = scanner;
+    try {
+      await scanner.start();
+      _scanSubscription = scanner.receivers.listen((list) {
+        if (mounted) setState(() => _receivers = list);
+      });
+    } catch (_) {
+      // Découverte indisponible sur ce réseau : la connexion directe reste
+      // simplement invisible, le flux navigateur habituel reste utilisable.
+    }
+  }
+
+  Future<void> _connectTo(DiscoveredReceiver receiver) async {
+    final status = _status;
+    if (status?.ip == null || status?.port == null) return;
+    setState(() {
+      _connectingTo = receiver;
+      _connectError = null;
+      _connectedTo = null;
+    });
+    try {
+      final accepted = await widget.pairingClient.requestConnection(
+        receiverAddress: InternetAddress(receiver.address),
+        receiverPort: receiver.pairPort,
+        fromName: defaultDeviceName(),
+        streamUrl: 'http://${status!.ip}:${status.port}/stream',
+      );
+      if (!mounted) return;
+      setState(() {
+        _connectedTo = accepted ? receiver : null;
+        _connectError = accepted
+            ? null
+            : 'Connexion refusée par ${receiver.name}.';
+      });
+    } catch (e) {
+      if (mounted) setState(() => _connectError = 'Échec de connexion : $e');
+    } finally {
+      if (mounted) setState(() => _connectingTo = null);
+    }
+  }
+
+  @override
+  void dispose() {
+    _scanSubscription?.cancel();
+    _scanner?.stop();
+    super.dispose();
   }
 
   Future<void> _refreshStatus() async {
@@ -244,6 +323,8 @@ class _ProjectionScreenState extends State<ProjectionScreen> {
           ),
         ],
         const SizedBox(height: 20),
+        _buildDirectConnectionSection(context),
+        const SizedBox(height: 20),
         Text('Mode d\'emploi', style: theme.textTheme.titleMedium),
         const SizedBox(height: 8),
         const _Step(
@@ -282,11 +363,96 @@ class _ProjectionScreenState extends State<ProjectionScreen> {
                 const Text(
                   '• La capture s\'arrête si Android révoque l\'autorisation.',
                 ),
+                const Text(
+                  '• Connexion directe : Wi-Fi local uniquement (découverte '
+                  'par diffusion UDP). Ni Bluetooth ni câble — chacun '
+                  'nécessiterait un module natif par plateforme non '
+                  'construit ici, voir docs/decisions-a-valider.md.',
+                ),
               ],
             ),
           ),
         ),
       ],
+    );
+  }
+
+  Widget _buildDirectConnectionSection(BuildContext context) {
+    final theme = Theme.of(context);
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Connexion directe (sans navigateur)',
+              style: theme.textTheme.titleMedium,
+            ),
+            const SizedBox(height: 4),
+            Text(
+              'Ouvre « Recevoir une projection » sur le PC/TV cible, puis '
+              'connecte-toi ici une fois la capture démarrée.',
+              style: theme.textTheme.bodySmall,
+            ),
+            const SizedBox(height: 12),
+            if (_receivers.isEmpty)
+              const Text('Aucun récepteur détecté sur le réseau pour le moment.')
+            else
+              ..._receivers.map((receiver) {
+                final isConnecting = _connectingTo == receiver;
+                final isConnected = _connectedTo == receiver;
+                return Padding(
+                  padding: const EdgeInsets.only(bottom: 8),
+                  child: Row(
+                    children: [
+                      Icon(
+                        isConnected ? Icons.cast_connected : Icons.tv,
+                        color: isConnected
+                            ? theme.colorScheme.primary
+                            : theme.colorScheme.onSurfaceVariant,
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Text(
+                          receiver.name,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                      FilledButton(
+                        onPressed: (!_running || isConnecting)
+                            ? null
+                            : () => _connectTo(receiver),
+                        child: isConnecting
+                            ? const SizedBox(
+                                width: 16,
+                                height: 16,
+                                child: CircularProgressIndicator(strokeWidth: 2),
+                              )
+                            : Text(isConnected ? 'Connecté' : 'Se connecter'),
+                      ),
+                    ],
+                  ),
+                );
+              }),
+            if (!_running)
+              Padding(
+                padding: const EdgeInsets.only(top: 4),
+                child: Text(
+                  'Démarre la capture pour pouvoir t\'y connecter directement.',
+                  style: theme.textTheme.bodySmall,
+                ),
+              ),
+            if (_connectError != null) ...[
+              const SizedBox(height: 8),
+              Text(
+                _connectError!,
+                style: TextStyle(color: theme.colorScheme.error),
+              ),
+            ],
+          ],
+        ),
+      ),
     );
   }
 }

@@ -155,6 +155,16 @@ Dernière mise à jour : 2026-11-05.
   optique, et pousse la luminosité au maximum via `screen_brightness` quand la plateforme le
   permet. Ne nécessite aucun matériel ni le téléphone de test pour être vérifié. `flutter analyze`
   et `flutter test` passent.
+- **Connexion directe mode B (sans navigateur)** : le téléphone découvre les récepteurs
+  (PC/TV exécutant aussi l'app) par diffusion UDP sur le réseau local, envoie une demande
+  d'autorisation TCP (JSON), et — si acceptée — le récepteur affiche le flux directement dans
+  l'application (parsing `multipart/x-mixed-replace` en Dart pur, sans `<img>` de navigateur).
+  Écrans « Recevoir une projection (labo) » (récepteur) et section « Connexion directe » de l'écran
+  mode B (émetteur). `flutter analyze` et `flutter test` passent, y compris des tests d'intégration
+  avec de vraies sockets en boucle locale (découverte, appairage accepter/refuser/expiration,
+  parsing MJPEG, bout en bout écran récepteur). **Wi-Fi local uniquement** : ni Bluetooth ni câble
+  USB ne sont implémentés (chacun demanderait un module natif par plateforme, non construit ici) ;
+  jamais vérifié entre deux appareils physiques séparés (seulement en boucle locale 127.0.0.1).
 - Rien d'autre en cours activement — en attente de la prochaine priorité : billing/paiements (bloqué
   par le §18), le mode A (module USB-C, bloqué par le §18), ou le câblage réel du mode B/C derrière
   un accessoire physique une fois les décisions matérielles prises.
@@ -189,6 +199,10 @@ Dernière mise à jour : 2026-11-05.
   (motif de calibrage, sélection d'image, orientations, luminosité qui échoue silencieusement sur
   web) ; jamais projeté à travers une vraie lentille optique — aucun accessoire disponible dans cet
   environnement, voir docs/decisions-a-valider.md.
+- Connexion directe (découverte Wi-Fi + appairage) : la logique réseau est testée en boucle locale
+  (127.0.0.1), jamais entre deux appareils physiques sur un vrai réseau Wi-Fi domestique — la
+  diffusion UDP peut se comporter différemment selon le routeur/pare-feu (isolation des clients
+  Wi-Fi, blocage du broadcast...), non vérifiable sans deux machines réelles.
 
 ## Risques techniques identifiés
 

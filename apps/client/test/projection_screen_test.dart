@@ -28,7 +28,7 @@ void main() {
     });
 
     await tester.pumpWidget(
-      const MaterialApp(home: ProjectionScreen(isAndroidOverride: true)),
+      const MaterialApp(home: ProjectionScreen(isAndroidOverride: true, enableScanning: false)),
     );
     await tester.pumpAndSettle();
 
@@ -50,7 +50,7 @@ void main() {
     });
 
     await tester.pumpWidget(
-      const MaterialApp(home: ProjectionScreen(isAndroidOverride: true)),
+      const MaterialApp(home: ProjectionScreen(isAndroidOverride: true, enableScanning: false)),
     );
     await tester.pumpAndSettle();
 
@@ -81,7 +81,7 @@ void main() {
     });
 
     await tester.pumpWidget(
-      const MaterialApp(home: ProjectionScreen(isAndroidOverride: true)),
+      const MaterialApp(home: ProjectionScreen(isAndroidOverride: true, enableScanning: false)),
     );
     await tester.pumpAndSettle();
 

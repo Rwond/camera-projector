@@ -64,6 +64,28 @@ le mode B final : Miracast/DLNA et le protocole des projecteurs Wi-Fi restent à
 `android/app/src/main/kotlin/com/swvertex/swvertex_camera_projector/ScreenStreamService.kt` et
 l'écran Flutter dans `lib/features/projection/`.
 
+### Connexion directe (sans navigateur)
+
+Alternative à l'étape 3 ci-dessus : si le récepteur (PC/TV) exécute aussi cette application, ouvre
+« Recevoir une projection (labo) » depuis son accueil — il devient visible sur le réseau local sous
+le nom de sa machine. Depuis le téléphone, une fois la capture démarrée, la carte « Connexion
+directe » de l'écran mode B liste les récepteurs détectés : toucher « Se connecter » envoie une
+demande d'autorisation ; le récepteur affiche « *X* souhaite projeter sur cet écran. Accepter ? » et,
+en cas d'acceptation, affiche le flux directement dans l'application (pas de navigateur, pas d'URL à
+recopier).
+
+Fonctionnement : découverte par diffusion UDP (`lib/features/projection/discovery_service.dart`,
+port 45680), demande/réponse JSON sur TCP (`pairing_service.dart`), puis lecture du flux
+`multipart/x-mixed-replace` directement en Dart (`core/mjpeg_client.dart`, sans `<img>` de
+navigateur) et affichage (`mjpeg_viewer_screen.dart`).
+
+Limites, honnêtement : **Wi-Fi local uniquement**. Ni Bluetooth ni câble USB ne sont implémentés —
+chacun demanderait un module natif par plateforme (API Bluetooth Classic très différentes entre
+Android/Windows/macOS, mode accessoire USB côté hôte...), un chantier à part entière non entamé ici
+et de toute façon dépendant des décisions encore ouvertes dans `docs/decisions-a-valider.md`. La
+découverte réseau n'a été vérifiée qu'en boucle locale (tests automatisés) : jamais testée entre deux
+appareils physiques séparés dans cet environnement.
+
 ## Prototype de projection (labo, lentille optique)
 
 Second prototype, multiplateforme cette fois : affiche une image choisie (ou un motif
@@ -86,11 +108,13 @@ DPAPI selon la plateforme, WebCrypto sur Web) — jamais en clair dans `shared_p
 ## Architecture du code
 
 ```
-lib/core/            Client HTTP (ApiClient) et stockage sécurisé des jetons (TokenStorage)
-lib/features/auth/    Connexion, inscription, AuthService
-lib/features/devices/ Liste/association/dissociation des appareils du compte
-lib/features/home/    Écran d'accueil post-connexion
-lib/features/lens/    Prototype du mode C (lentille) : affichage plein écran + luminosité
+lib/core/              Client HTTP, stockage sécurisé des jetons, client MJPEG, nom d'appareil
+lib/features/auth/      Connexion, inscription, AuthService
+lib/features/devices/   Liste/association/dissociation des appareils du compte
+lib/features/home/      Écran d'accueil post-connexion
+lib/features/lens/      Prototype du mode C (lentille) : affichage plein écran + luminosité
+lib/features/projection/ Prototype mode B + connexion directe (découverte, appairage, visionneuse)
+lib/theme/              Palette de marque (extraite du logo) et thème Material 3
 ```
 
 Tout ce qui est spécifique à l'OS (capture caméra/écran, USB-C, découverte réseau Wi-Fi) devra
