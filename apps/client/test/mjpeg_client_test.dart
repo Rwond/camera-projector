@@ -5,25 +5,34 @@ import 'package:flutter_test/flutter_test.dart';
 
 import 'package:swvertex_camera_projector/core/mjpeg_client.dart';
 
-/// Sert exactement le format produit par ScreenStreamService.kt
-/// (`multipart/x-mixed-replace; boundary=frame`, une partie par trame, avec
-/// Content-Length) depuis un vrai HttpServer en boucle locale.
-Future<HttpServer> _startFakeStreamServer(List<Uint8List> frames) async {
-  final server = await HttpServer.bind(InternetAddress.loopbackIPv4, 0);
-  server.listen((request) async {
-    request.response.headers.set(
-      'Content-Type',
-      'multipart/x-mixed-replace; boundary=frame',
+/// Reproduit fidèlement le format brut produit par ScreenStreamService.kt :
+/// une socket brute, sans `Content-Length` ni `Transfer-Encoding: chunked`
+/// pour le corps global (seules les parties en ont un) — la fin du flux
+/// n'est signalée que par la fermeture de la connexion. Un `dart:io
+/// HttpServer` ajoute automatiquement un chunked encoding dans ce cas, ce
+/// qui masquerait le bug réel (vérifié sur matériel : le flux s'affichait
+/// dans un navigateur mais jamais via `HttpClient`, qui attend une longueur
+/// de corps déterminée). D'où une socket brute ici aussi, pour que ce test
+/// aurait vraiment détecté le problème.
+Future<ServerSocket> _startFakeStreamServer(List<Uint8List> frames) async {
+  final server = await ServerSocket.bind(InternetAddress.loopbackIPv4, 0);
+  server.listen((client) async {
+    // La requête du client n'est jamais lue, comme sur le vrai serveur
+    // Android qui ne lit que la ligne de requête — le reste importe peu ici.
+    client.write(
+      'HTTP/1.1 200 OK\r\n'
+      'Content-Type: multipart/x-mixed-replace; boundary=frame\r\n'
+      'Connection: close\r\n\r\n',
     );
     for (final frame in frames) {
-      request.response.write('--frame\r\n');
-      request.response.write('Content-Type: image/jpeg\r\n');
-      request.response.write('Content-Length: ${frame.length}\r\n\r\n');
-      request.response.add(frame);
-      request.response.write('\r\n');
-      await request.response.flush();
+      client.write('--frame\r\n');
+      client.write('Content-Type: image/jpeg\r\n');
+      client.write('Content-Length: ${frame.length}\r\n\r\n');
+      client.add(frame);
+      client.write('\r\n');
+      await client.flush();
     }
-    await request.response.close();
+    await client.close();
   });
   return server;
 }
