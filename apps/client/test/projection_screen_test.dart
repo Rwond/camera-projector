@@ -3,7 +3,22 @@ import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:qr_flutter/qr_flutter.dart';
 
+import 'package:swvertex_camera_projector/features/projection/dlna_service.dart';
 import 'package:swvertex_camera_projector/features/projection/projection_screen.dart';
+
+/// Pas de vraie découverte SSDP dans les tests : le réseau de la machine qui
+/// exécute la suite n'a rien à voir là-dedans (voir discovery_registry_test.dart
+/// pour le même principe côté Wi-Fi local).
+class _NoRenderersDlnaService extends DlnaCastService {
+  const _NoRenderersDlnaService();
+
+  @override
+  Future<List<DlnaRenderer>> discover({
+    Duration timeout = const Duration(seconds: 4),
+  }) async {
+    return const [];
+  }
+}
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -172,4 +187,38 @@ void main() {
       expect(find.text('Contrôle à distance actif'), findsOneWidget);
     });
   });
+
+  testWidgets(
+    'la recherche DLNA se termine sans planter quand aucun récepteur ne répond',
+    (tester) async {
+      messenger.setMockMethodCallHandler(channel, (call) async {
+        if (call.method == 'status') {
+          return <String, dynamic>{'running': false};
+        }
+        return null;
+      });
+
+      tester.view.physicalSize = const Size(800, 2200);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.reset);
+
+      await tester.pumpWidget(
+        const MaterialApp(
+          home: ProjectionScreen(
+            isAndroidOverride: true,
+            enableScanning: false,
+            dlnaService: _NoRenderersDlnaService(),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text('Rechercher des Smart TV'));
+      await tester.pump();
+      await tester.pumpAndSettle();
+
+      expect(find.text('Recherche en cours…'), findsNothing);
+      expect(find.byType(CircularProgressIndicator), findsNothing);
+    },
+  );
 }

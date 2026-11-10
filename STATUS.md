@@ -167,6 +167,29 @@ Dernière mise à jour : 2026-11-05.
   d'autorisation et affichage du flux sans navigateur confirmés bout en bout. **Wi-Fi local
   uniquement** : ni Bluetooth ni câble USB ne sont implémentés (chacun demanderait un module natif
   par plateforme, non construit ici).
+- **QR code + partage du lien (mode B classique)** : QR code encodant l'adresse et bouton
+  « Partager le lien » (menu de partage natif, Bluetooth inclus pour le *texte* de l'adresse, pas la
+  vidéo) sur l'écran mode B. `flutter analyze`/`flutter test` passent.
+- **Contrôle à distance (expérimental, mode B classique)** : un clic sur l'image dans le navigateur
+  du récepteur rejoue un appui sur l'écran du téléphone, via un service d'accessibilité Android
+  (`RemoteControlAccessibilityService.kt`, `dispatchGesture`, API publique depuis Android 7) que
+  l'utilisateur doit activer manuellement. Désactivé par défaut, avec avertissement explicite :
+  tant qu'il est actif, quiconque atteint l'adresse du flux peut contrôler l'écran (pas de
+  confirmation par appui comme pour la connexion directe). `flutter analyze`/`flutter test` passent
+  côté Dart ; **la partie native (dispatchGesture) n'a pas pu être testée sur un vrai geste** — pas
+  de harnais de test instrumenté Android dans cet environnement, à vérifier sur appareil physique.
+- **Smart TV (DLNA, prototype séparé)** : découverte UPnP/SSDP des récepteurs DLNA et envoi de
+  l'adresse du flux (`SetAVTransportURI` + `Play`, bibliothèque `upnp_client`). Avantage sur la
+  connexion directe : aucune app SWVERTEX requise sur la TV. **Compatibilité non garantie** : le
+  flux MJPEG brut diffusé par le mode B n'est pas le format qu'attendent la plupart des récepteurs
+  DLNA grand public (MP4/H.264 attendu plutôt qu'un multipart continu) — jamais vérifié contre une
+  vraie Smart TV, qui n'est pas disponible dans cet environnement. `flutter analyze`/`flutter test`
+  passent (découverte testée avec un service DLNA factice, sans réseau réel).
+- **Miracast étudié et écarté** : diffusion d'écran native vers un PC/TV sans rien y installer.
+  Recherché et confirmé bloqué par Android lui-même (pas un manque de temps) : l'API de diffusion
+  Wi-Fi Display exige la permission système `CONFIGURE_WIFI_DISPLAY`, réservée aux apps signées avec
+  la clé de l'OS. Aucune app tierce ne peut l'utiliser — non implémenté, et non implémentable sans
+  être une app système.
 - Rien d'autre en cours activement — en attente de la prochaine priorité : billing/paiements (bloqué
   par le §18), le mode A (module USB-C, bloqué par le §18), ou le câblage réel du mode B/C derrière
   un accessoire physique une fois les décisions matérielles prises.

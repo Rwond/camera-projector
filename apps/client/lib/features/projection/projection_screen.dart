@@ -469,6 +469,8 @@ class _ProjectionScreenState extends State<ProjectionScreen> {
         const SizedBox(height: 20),
         _buildDirectConnectionSection(context),
         const SizedBox(height: 20),
+        _buildDlnaSection(context),
+        const SizedBox(height: 20),
         Text('Mode d\'emploi', style: theme.textTheme.titleMedium),
         const SizedBox(height: 8),
         const _Step(
@@ -503,7 +505,9 @@ class _ProjectionScreenState extends State<ProjectionScreen> {
                 const Text('• Android uniquement, sans son.'),
                 const Text('• Environ 10 images/s, JPEG 720p.'),
                 const Text(
-                  '• Pas encore de Miracast/DLNA : le mode B final reste à définir.',
+                  '• Pas de Miracast (bloqué par Android pour les apps '
+                  'tierces) ; DLNA en prototype séparé ci-dessous, '
+                  'compatibilité par téléviseur non garantie.',
                 ),
                 const Text(
                   '• La capture s\'arrête si Android révoque l\'autorisation.',
@@ -519,6 +523,12 @@ class _ProjectionScreenState extends State<ProjectionScreen> {
                   'glissement/clavier), précision selon la découpe réelle de '
                   'l\'image, et expose le contrôle à quiconque atteint '
                   'l\'adresse tant qu\'il est activé.',
+                ),
+                const Text(
+                  '• DLNA : envoie le flux MJPEG tel quel — la plupart des '
+                  'téléviseurs DLNA attendent un format vidéo standard '
+                  '(MP4/H.264), pas un flux multipart continu. Jamais '
+                  'vérifié contre une vraie Smart TV dans cet environnement.',
                 ),
               ],
             ),
@@ -704,6 +714,102 @@ class _ProjectionScreenState extends State<ProjectionScreen> {
                 style: TextStyle(color: theme.colorScheme.error),
               ),
             ],
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildDlnaSection(BuildContext context) {
+    final theme = Theme.of(context);
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Smart TV (DLNA, prototype)',
+              style: theme.textTheme.titleMedium,
+            ),
+            const SizedBox(height: 4),
+            Text(
+              'Aucune app à installer sur la TV si elle supporte déjà DLNA — '
+              'mais rien ne garantit qu\'elle sache lire ce flux (voir les '
+              'limites plus bas).',
+              style: theme.textTheme.bodySmall,
+            ),
+            const SizedBox(height: 12),
+            OutlinedButton.icon(
+              onPressed: _dlnaSearching ? null : _searchDlnaRenderers,
+              icon: _dlnaSearching
+                  ? const SizedBox(
+                      width: 16,
+                      height: 16,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
+                  : const Icon(Icons.search, size: 18),
+              label: Text(
+                _dlnaSearching
+                    ? 'Recherche en cours…'
+                    : 'Rechercher des Smart TV',
+              ),
+            ),
+            if (_dlnaRenderers.isNotEmpty) ...[
+              const SizedBox(height: 12),
+              ..._dlnaRenderers.map((renderer) {
+                final isCasting = _dlnaCasting == renderer;
+                final isCastedTo = _dlnaCastedTo == renderer;
+                return Padding(
+                  padding: const EdgeInsets.only(bottom: 8),
+                  child: Row(
+                    children: [
+                      Icon(
+                        isCastedTo ? Icons.cast_connected : Icons.tv,
+                        color: isCastedTo
+                            ? theme.colorScheme.primary
+                            : theme.colorScheme.onSurfaceVariant,
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Text(
+                          renderer.name,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                      FilledButton(
+                        onPressed: (!_running || isCasting)
+                            ? null
+                            : () => _castToDlna(renderer),
+                        child: isCasting
+                            ? const SizedBox(
+                                width: 16,
+                                height: 16,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                ),
+                              )
+                            : Text(isCastedTo ? 'Envoyé' : 'Caster'),
+                      ),
+                    ],
+                  ),
+                );
+              }),
+            ],
+            if (_dlnaError != null) ...[
+              const SizedBox(height: 8),
+              Text(
+                _dlnaError!,
+                style: TextStyle(color: theme.colorScheme.error),
+              ),
+            ],
+            const SizedBox(height: 8),
+            Text(
+              'Contrairement à la connexion directe, la TV ne demande pas '
+              'confirmation : elle essaie simplement de lire l\'adresse '
+              'envoyée.',
+              style: theme.textTheme.bodySmall,
+            ),
           ],
         ),
       ),

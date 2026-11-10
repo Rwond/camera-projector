@@ -87,6 +87,61 @@ et de toute façon dépendant des décisions encore ouvertes dans `docs/decision
 Vérifié pour de vrai entre un téléphone Android et un PC Windows sur le même réseau Wi-Fi :
 découverte, demande d'autorisation et affichage du flux sans navigateur fonctionnent bout en bout.
 
+### QR code et partage du lien
+
+Sur l'écran mode B classique (navigateur), la capture affiche en plus un QR code encodant l'adresse
+et un bouton « Partager le lien » qui ouvre le menu de partage natif (Bluetooth, messagerie, e-mail,
+selon ce que le destinataire accepte) — pour ne pas avoir à recopier l'adresse à la main. Le
+Bluetooth sert ici uniquement à transmettre le **texte de l'adresse**, pas le flux vidéo lui-même
+(voir plus bas pourquoi diffuser la vidéo elle-même par Bluetooth n'est pas réaliste).
+
+### Contrôle à distance (expérimental, labo)
+
+Depuis la page du navigateur servie par le mode B classique, un clic sur l'image rejoue un appui à
+l'endroit correspondant sur l'écran du téléphone (`RemoteControlAccessibilityService.kt`, API
+Android `AccessibilityService.dispatchGesture`, publique depuis Android 7).
+
+**Implication de sécurité à connaître avant d'activer cette fonction** : tant que le contrôle à
+distance est activé dans l'app, **n'importe qui atteignant l'adresse du flux sur le réseau local
+peut contrôler l'écran du téléphone** — il n'y a pas de confirmation par appui, contrairement à la
+connexion directe. Deux garde-fous : (1) le service d'accessibilité doit être activé manuellement
+par l'utilisateur dans Réglages Android (l'app ne peut pas le faire à sa place), et (2) le contrôle
+est désactivé par défaut et à chaque fermeture de l'écran — à n'activer que sur un réseau de
+confiance, et à désactiver juste après usage.
+
+Limites : un seul tap à la fois (pas de glissement ni de clavier), précision dépendant du calcul
+(fait côté navigateur) de la zone réellement occupée par l'image dans sa boîte d'affichage. Pas de
+harnais de test instrumenté Android dans cet environnement : la partie native n'a pas pu être
+vérifiée sur un vrai geste, seule la partie Dart (bascule, avertissement, appels de canal) est
+testée.
+
+### Smart TV (DLNA, prototype séparé)
+
+Section « Smart TV (DLNA) » du même écran : découvre les récepteurs DLNA/UPnP du réseau
+(`lib/features/projection/dlna_service.dart`, bibliothèque `upnp_client`) et leur envoie l'adresse du
+flux via `SetAVTransportURI` + `Play`. Contrairement à la connexion directe, **aucune app SWVERTEX
+n'est nécessaire sur la TV** — mais contrairement aussi à la connexion directe, **la TV ne demande
+aucune confirmation** : elle essaie simplement de lire l'adresse envoyée.
+
+**Compatibilité non garantie, honnêtement** : le flux envoyé est le MJPEG brut du mode B
+(`multipart/x-mixed-replace`), alors que la plupart des récepteurs DLNA grand public attendent un
+format vidéo standard (MP4/H.264) avec une taille de fichier connue. Rien ne garantit qu'un
+téléviseur donné accepte ou affiche correctement ce flux — jamais vérifié contre une vraie Smart TV
+dans cet environnement, qui n'en possède aucune.
+
+### Ce qui reste délibérément hors de portée
+
+- **Miracast** (diffusion d'écran native vers un PC/TV sans rien y installer) : bloqué par Android
+  lui-même, pas par un manque de temps. L'API de diffusion Wi-Fi Display est protégée par la
+  permission système `CONFIGURE_WIFI_DISPLAY`, réservée aux apps signées avec la clé de l'OS —
+  aucune app tierce, y compris la nôtre, ne peut l'utiliser.
+- **Diffuser la vidéo elle-même par Bluetooth** : demanderait un module natif par plateforme (API
+  Bluetooth Classic très différentes entre Android/Windows/macOS), un chantier à part entière non
+  entamé ici.
+- **Caster vers un appareil quelconque sans rien y installer ni navigateur ouvert** (ex. un autre
+  téléphone nu) : n'existe pas avec les technologies actuelles — il faut toujours soit un navigateur,
+  soit l'app installée, soit (DLNA) un appareil qui expose déjà nativement un lecteur compatible.
+
 ## Prototype de projection (labo, lentille optique)
 
 Second prototype, multiplateforme cette fois : affiche une image choisie (ou un motif
