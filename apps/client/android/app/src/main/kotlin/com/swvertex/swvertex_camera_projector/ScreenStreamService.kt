@@ -74,6 +74,15 @@ class ScreenStreamService : Service() {
         @Volatile
         var lastError: String? = null
             private set
+
+        /**
+         * Contrôle à distance (prototype labo) : désactivé par défaut, doit être
+         * explicitement activé par l'utilisateur dans l'application. Tant qu'il
+         * est activé, quiconque atteint l'adresse du flux peut envoyer des
+         * gestes — voir l'avertissement affiché dans l'app et le README.
+         */
+        @Volatile
+        var remoteControlEnabled: Boolean = false
     }
 
     private var mediaProjection: MediaProjection? = null
@@ -92,6 +101,15 @@ class ScreenStreamService : Service() {
     private var captureWidth = 0
     private var captureHeight = 0
     private var lastCaptureAt = 0L
+
+    // Dimensions réelles de l'écran (non réduites), pour convertir les
+    // coordonnées normalisées (0.0-1.0) reçues du récepteur en pixels réels
+    // à transmettre au service d'accessibilité — la capture diffusée, elle,
+    // est réduite à MAX_CAPTURE_WIDTH pour la bande passante.
+    @Volatile
+    private var screenWidth = 0
+    @Volatile
+    private var screenHeight = 0
 
     private var paddedBitmap: Bitmap? = null
     private var outputBitmap: Bitmap? = null
@@ -227,6 +245,8 @@ class ScreenStreamService : Service() {
 
         val sourceWidth = metrics.widthPixels.coerceAtLeast(2)
         val sourceHeight = metrics.heightPixels.coerceAtLeast(2)
+        screenWidth = sourceWidth
+        screenHeight = sourceHeight
         val scale = if (sourceWidth > MAX_CAPTURE_WIDTH) {
             MAX_CAPTURE_WIDTH.toFloat() / sourceWidth
         } else {
@@ -354,7 +374,8 @@ class ScreenStreamService : Service() {
             client.soTimeout = 5000
             val reader = BufferedReader(InputStreamReader(client.getInputStream()))
             val requestLine = reader.readLine() ?: return
-            val path = requestLine.split(" ").getOrNull(1)?.substringBefore('?') ?: "/"
+            val target = requestLine.split(" ").getOrNull(1) ?: "/"
+            val path = target.substringBefore('?')
             when {
                 path == "/stream" -> streamFrames(client)
                 path == "/status" -> writeResponse(
@@ -362,6 +383,7 @@ class ScreenStreamService : Service() {
                     "application/json; charset=utf-8",
                     "{\"running\":$isRunning,\"port\":$activePort}",
                 )
+                path == "/input" -> handleInput(client, target)
                 else -> writeResponse(client, "text/html; charset=utf-8", RECEIVER_HTML)
             }
         } catch (e: IOException) {
@@ -372,6 +394,59 @@ class ScreenStreamService : Service() {
             } catch (_: IOException) {
             }
         }
+    }
+
+    /**
+     * Rejoue un tap envoyé par le récepteur (prototype labo de contrôle à
+     * distance). `target` est de la forme `/input?x=0.42&y=0.67`, x/y étant
+     * normalisés (0.0-1.0) par rapport à l'image affichée côté récepteur —
+     * convertis ici en pixels réels de l'écran (voir `screenWidth/Height`,
+     * distincts de la résolution réduite de la capture diffusée).
+     */
+    private fun handleInput(client: Socket, target: String) {
+        val query = target.substringAfter('?', "")
+        val params = query.split('&').mapNotNull { part ->
+            val (key, value) = part.split('=', limit = 2).let {
+                if (it.size == 2) it[0] to it[1] else return@mapNotNull null
+            }
+            key to value
+        }.toMap()
+
+        val reason = when {
+            !remoteControlEnabled -> "disabled"
+            RemoteControlAccessibilityService.instance == null -> "service_not_connected"
+            screenWidth <= 0 || screenHeight <= 0 -> "not_ready"
+            else -> null
+        }
+
+        if (reason != null) {
+            writeResponse(
+                client,
+                "application/json; charset=utf-8",
+                "{\"ok\":false,\"reason\":\"$reason\"}",
+            )
+            return
+        }
+
+        val nx = params["x"]?.toFloatOrNull()
+        val ny = params["y"]?.toFloatOrNull()
+        if (nx == null || ny == null || nx !in 0f..1f || ny !in 0f..1f) {
+            writeResponse(
+                client,
+                "application/json; charset=utf-8",
+                "{\"ok\":false,\"reason\":\"invalid_coordinates\"}",
+            )
+            return
+        }
+
+        val x = nx * screenWidth
+        val y = ny * screenHeight
+        val dispatched = RemoteControlAccessibilityService.instance?.tap(x, y) ?: false
+        writeResponse(
+            client,
+            "application/json; charset=utf-8",
+            "{\"ok\":$dispatched}",
+        )
     }
 
     private fun writeResponse(client: Socket, contentType: String, body: String) {
@@ -480,25 +555,76 @@ class ScreenStreamService : Service() {
             header { padding: 12px 16px; background: #171723; border-bottom: 1px solid #2a2a3a;
                      display: flex; align-items: center; justify-content: space-between; gap: 16px; }
             h1 { margin: 0; font-size: 16px; font-weight: 600; }
-            #state { font-size: 13px; color: #9f9fb5; }
+            #state, #remoteState { font-size: 13px; color: #9f9fb5; }
             main { height: calc(100% - 49px); display: flex; align-items: center;
                    justify-content: center; overflow: hidden; }
-            img { max-width: 100%; max-height: 100%; object-fit: contain; background: #000; }
+            img { max-width: 100%; max-height: 100%; object-fit: contain; background: #000;
+                  cursor: crosshair; }
           </style>
         </head>
         <body>
           <header>
             <h1>SWVERTEX CAMERA PROJECTOR — récepteur de test</h1>
             <span id="state">En attente de l'image…</span>
+            <span id="remoteState"></span>
           </header>
           <main><img id="stream" src="/stream" alt="Flux de l'écran du téléphone"></main>
           <script>
             const img = document.getElementById('stream');
             const state = document.getElementById('state');
+            const remoteState = document.getElementById('remoteState');
             img.addEventListener('load', () => { state.textContent = 'Flux actif'; });
             img.addEventListener('error', () => {
               state.textContent = 'Flux interrompu, reconnexion…';
               setTimeout(() => { img.src = '/stream?' + Date.now(); }, 1000);
+            });
+
+            // Contrôle à distance (prototype labo) : clic sur l'image = tap sur
+            // l'écran du téléphone, si le propriétaire l'a explicitement activé
+            // dans l'application (voir README : implication de sécurité).
+            const reasons = {
+              disabled: 'désactivé sur le téléphone',
+              service_not_connected: "service d'accessibilité non activé",
+              not_ready: 'capture pas encore prête',
+              invalid_coordinates: 'coordonnées invalides',
+            };
+            img.addEventListener('click', async (event) => {
+              const rect = img.getBoundingClientRect();
+              const naturalW = img.naturalWidth;
+              const naturalH = img.naturalHeight;
+              if (!naturalW || !naturalH || !rect.width || !rect.height) return;
+
+              // L'image garde son ratio (object-fit: contain) : on calcule la
+              // zone réellement occupée par l'image dans sa boîte pour ignorer
+              // les clics sur les bandes noires et bien mapper le reste.
+              const boxRatio = rect.width / rect.height;
+              const imgRatio = naturalW / naturalH;
+              let contentW = rect.width;
+              let contentH = rect.height;
+              let offsetX = 0;
+              let offsetY = 0;
+              if (imgRatio > boxRatio) {
+                contentH = rect.width / imgRatio;
+                offsetY = (rect.height - contentH) / 2;
+              } else {
+                contentW = rect.height * imgRatio;
+                offsetX = (rect.width - contentW) / 2;
+              }
+              const clickX = event.clientX - rect.left - offsetX;
+              const clickY = event.clientY - rect.top - offsetY;
+              if (clickX < 0 || clickY < 0 || clickX > contentW || clickY > contentH) return;
+
+              const nx = (clickX / contentW).toFixed(4);
+              const ny = (clickY / contentH).toFixed(4);
+              try {
+                const res = await fetch('/input?x=' + nx + '&y=' + ny);
+                const data = await res.json();
+                remoteState.textContent = data.ok
+                  ? 'Tap envoyé'
+                  : 'Contrôle indisponible : ' + (reasons[data.reason] || data.reason || '?');
+              } catch (e) {
+                remoteState.textContent = 'Contrôle indisponible (réseau)';
+              }
             });
           </script>
         </body>

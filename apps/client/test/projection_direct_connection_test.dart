@@ -29,12 +29,15 @@ void main() {
     (tester) async {
       await tester.runAsync(() async {
         messenger.setMockMethodCallHandler(channel, (call) async {
-          return <String, dynamic>{
-            'running': true,
-            'ip': '192.168.1.42',
-            'port': 8080,
-            'url': 'http://192.168.1.42:8080/',
-          };
+          if (call.method == 'status') {
+            return <String, dynamic>{
+              'running': true,
+              'ip': '192.168.1.42',
+              'port': 8080,
+              'url': 'http://192.168.1.42:8080/',
+            };
+          }
+          return null;
         });
 
         final server = PairingServer();
@@ -53,6 +56,10 @@ void main() {
           address: InternetAddress.loopbackIPv4.address,
           pairPort: port,
         );
+
+        tester.view.physicalSize = const Size(800, 2400);
+        tester.view.devicePixelRatio = 1.0;
+        addTearDown(tester.view.reset);
 
         await tester.pumpWidget(
           MaterialApp(
@@ -82,12 +89,15 @@ void main() {
   ) async {
     await tester.runAsync(() async {
       messenger.setMockMethodCallHandler(channel, (call) async {
-        return <String, dynamic>{
-          'running': true,
-          'ip': '192.168.1.42',
-          'port': 8080,
-          'url': 'http://192.168.1.42:8080/',
-        };
+        if (call.method == 'status') {
+          return <String, dynamic>{
+            'running': true,
+            'ip': '192.168.1.42',
+            'port': 8080,
+            'url': 'http://192.168.1.42:8080/',
+          };
+        }
+        return null;
       });
 
       final server = PairingServer();
@@ -104,6 +114,10 @@ void main() {
         address: InternetAddress.loopbackIPv4.address,
         pairPort: port,
       );
+
+      tester.view.physicalSize = const Size(800, 2400);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.reset);
 
       await tester.pumpWidget(
         MaterialApp(

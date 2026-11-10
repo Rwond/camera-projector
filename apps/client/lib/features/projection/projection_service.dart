@@ -50,4 +50,34 @@ class ProjectionService {
   Future<void> stop() async {
     await _channel.invokeMethod<void>('stop');
   }
+
+  /// Le service d'accessibilité (nécessaire au contrôle à distance) est-il
+  /// activé par l'utilisateur dans les réglages Android ?
+  Future<bool> isAccessibilityServiceEnabled() async {
+    final enabled = await _channel.invokeMethod<bool>(
+      'isAccessibilityServiceEnabled',
+    );
+    return enabled ?? false;
+  }
+
+  /// Ouvre l'écran système Réglages > Accessibilité : l'utilisateur doit y
+  /// activer le service lui-même, l'app ne peut pas le faire à sa place.
+  Future<void> openAccessibilitySettings() async {
+    await _channel.invokeMethod<void>('openAccessibilitySettings');
+  }
+
+  /// Active/désactive l'endpoint `/input` côté serveur natif. Désactivé par
+  /// défaut à chaque démarrage de l'app, même si le service d'accessibilité
+  /// reste activé — l'utilisateur doit le réautoriser consciemment.
+  Future<bool> setRemoteControlEnabled(bool enabled) async {
+    final result = await _channel.invokeMethod<bool>('setRemoteControlEnabled', {
+      'enabled': enabled,
+    });
+    return result ?? false;
+  }
+
+  Future<bool> isRemoteControlEnabled() async {
+    final enabled = await _channel.invokeMethod<bool>('isRemoteControlEnabled');
+    return enabled ?? false;
+  }
 }

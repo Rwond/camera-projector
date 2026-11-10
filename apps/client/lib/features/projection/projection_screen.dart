@@ -4,9 +4,12 @@ import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:qr_flutter/qr_flutter.dart';
+import 'package:share_plus/share_plus.dart';
 
 import '../../core/device_name.dart';
 import 'discovery_service.dart';
+import 'dlna_service.dart';
 import 'pairing_service.dart';
 import 'projection_service.dart';
 
@@ -20,6 +23,7 @@ class ProjectionScreen extends StatefulWidget {
     this.pairingClient = const PairingClient(),
     this.enableScanning = true,
     this.receiversOverride,
+    this.dlnaService = const DlnaCastService(),
   });
 
   final ProjectionService service;
@@ -37,6 +41,8 @@ class ProjectionScreen extends StatefulWidget {
   /// découverte réseau réelle.
   final List<DiscoveredReceiver>? receiversOverride;
 
+  final DlnaCastService dlnaService;
+
   @override
   State<ProjectionScreen> createState() => _ProjectionScreenState();
 }
@@ -53,6 +59,16 @@ class _ProjectionScreenState extends State<ProjectionScreen> {
   String? _connectError;
   DiscoveredReceiver? _connectedTo;
 
+  bool? _accessibilityEnabled;
+  bool _remoteControlEnabled = false;
+  bool _remoteControlBusy = false;
+
+  bool _dlnaSearching = false;
+  String? _dlnaError;
+  List<DlnaRenderer> _dlnaRenderers = const [];
+  DlnaRenderer? _dlnaCasting;
+  DlnaRenderer? _dlnaCastedTo;
+
   bool get _isAndroid =>
       widget.isAndroidOverride ??
       (!kIsWeb && defaultTargetPlatform == TargetPlatform.android);
@@ -64,6 +80,7 @@ class _ProjectionScreenState extends State<ProjectionScreen> {
     super.initState();
     if (_isAndroid) {
       unawaited(_refreshStatus());
+      unawaited(_refreshRemoteControlStatus());
     }
     if (widget.receiversOverride != null) {
       _receivers = widget.receiversOverride!;
@@ -115,11 +132,90 @@ class _ProjectionScreenState extends State<ProjectionScreen> {
     }
   }
 
+  Future<void> _searchDlnaRenderers() async {
+    setState(() {
+      _dlnaSearching = true;
+      _dlnaError = null;
+    });
+    try {
+      final renderers = await widget.dlnaService.discover();
+      if (!mounted) return;
+      setState(() => _dlnaRenderers = renderers);
+    } catch (e) {
+      if (mounted) setState(() => _dlnaError = 'Recherche impossible : $e');
+    } finally {
+      if (mounted) setState(() => _dlnaSearching = false);
+    }
+  }
+
+  Future<void> _castToDlna(DlnaRenderer renderer) async {
+    final status = _status;
+    if (status?.ip == null || status?.port == null) return;
+    setState(() {
+      _dlnaCasting = renderer;
+      _dlnaError = null;
+      _dlnaCastedTo = null;
+    });
+    try {
+      await widget.dlnaService.cast(
+        renderer,
+        Uri.parse('http://${status!.ip}:${status.port}/stream'),
+      );
+      if (!mounted) return;
+      setState(() => _dlnaCastedTo = renderer);
+    } catch (e) {
+      if (mounted) {
+        setState(
+          () => _dlnaError = '${renderer.name} n\'a pas accepté le flux : $e',
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _dlnaCasting = null);
+    }
+  }
+
   @override
   void dispose() {
     _scanSubscription?.cancel();
     _scanner?.stop();
+    if (_remoteControlEnabled) {
+      // Ne laisse jamais le contrôle à distance actif après avoir quitté
+      // cet écran : il doit être réautorisé consciemment à chaque fois.
+      unawaited(widget.service.setRemoteControlEnabled(false));
+    }
     super.dispose();
+  }
+
+  Future<void> _refreshRemoteControlStatus() async {
+    try {
+      final accessibilityEnabled = await widget.service
+          .isAccessibilityServiceEnabled();
+      final remoteControlEnabled = await widget.service
+          .isRemoteControlEnabled();
+      if (!mounted) return;
+      setState(() {
+        _accessibilityEnabled = accessibilityEnabled;
+        _remoteControlEnabled = remoteControlEnabled;
+      });
+    } on MissingPluginException {
+      // Ancienne version de l'app native sans ce canal : la section reste
+      // simplement indisponible plutôt que de planter l'écran.
+    }
+  }
+
+  Future<void> _openAccessibilitySettings() async {
+    await widget.service.openAccessibilitySettings();
+  }
+
+  Future<void> _toggleRemoteControl(bool enabled) async {
+    setState(() => _remoteControlBusy = true);
+    try {
+      final result = await widget.service.setRemoteControlEnabled(enabled);
+      if (!mounted) return;
+      setState(() => _remoteControlEnabled = result);
+    } finally {
+      if (mounted) setState(() => _remoteControlBusy = false);
+    }
   }
 
   Future<void> _refreshStatus() async {
@@ -202,6 +298,19 @@ class _ProjectionScreenState extends State<ProjectionScreen> {
     ).showSnackBar(const SnackBar(content: Text('Adresse copiée.')));
   }
 
+  Future<void> _shareUrl() async {
+    final url = _status?.url;
+    if (url == null) return;
+    // Passe par le menu de partage natif (Bluetooth, messagerie, e-mail...)
+    // plutôt que de recopier l'adresse à la main.
+    await SharePlus.instance.share(
+      ShareParams(
+        text: url,
+        subject: 'Adresse de la projection SWVERTEX',
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -268,11 +377,44 @@ class _ProjectionScreenState extends State<ProjectionScreen> {
                       color: theme.colorScheme.primary,
                     ),
                   ),
-                  const SizedBox(height: 8),
-                  OutlinedButton.icon(
-                    onPressed: _copyUrl,
-                    icon: const Icon(Icons.copy, size: 18),
-                    label: const Text('Copier l\'adresse'),
+                  const SizedBox(height: 12),
+                  Center(
+                    child: Container(
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: QrImageView(
+                        data: url,
+                        size: 160,
+                        backgroundColor: Colors.white,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    'Scanne ce code avec l\'appareil photo du récepteur pour '
+                    'ouvrir l\'adresse directement, sans la taper.',
+                    style: theme.textTheme.bodySmall,
+                    textAlign: TextAlign.center,
+                  ),
+                  const SizedBox(height: 12),
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
+                    children: [
+                      OutlinedButton.icon(
+                        onPressed: _copyUrl,
+                        icon: const Icon(Icons.copy, size: 18),
+                        label: const Text('Copier l\'adresse'),
+                      ),
+                      OutlinedButton.icon(
+                        onPressed: _shareUrl,
+                        icon: const Icon(Icons.share, size: 18),
+                        label: const Text('Partager le lien'),
+                      ),
+                    ],
                   ),
                 ] else if (_running) ...[
                   const SizedBox(height: 8),
@@ -323,6 +465,8 @@ class _ProjectionScreenState extends State<ProjectionScreen> {
           ),
         ],
         const SizedBox(height: 20),
+        _buildRemoteControlSection(context),
+        const SizedBox(height: 20),
         _buildDirectConnectionSection(context),
         const SizedBox(height: 20),
         Text('Mode d\'emploi', style: theme.textTheme.titleMedium),
@@ -338,7 +482,8 @@ class _ProjectionScreenState extends State<ProjectionScreen> {
         const _Step(
           number: 3,
           text:
-              'Ouvre l\'adresse affichée dans un navigateur sur le récepteur.',
+              'Ouvre l\'adresse affichée dans un navigateur sur le récepteur '
+              '(ou scanne le QR code / utilise « Partager le lien »).',
         ),
         const _Step(
           number: 4,
@@ -369,11 +514,120 @@ class _ProjectionScreenState extends State<ProjectionScreen> {
                   'nécessiterait un module natif par plateforme non '
                   'construit ici, voir docs/decisions-a-valider.md.',
                 ),
+                const Text(
+                  '• Contrôle à distance : un seul tap à la fois (pas de '
+                  'glissement/clavier), précision selon la découpe réelle de '
+                  'l\'image, et expose le contrôle à quiconque atteint '
+                  'l\'adresse tant qu\'il est activé.',
+                ),
               ],
             ),
           ),
         ),
       ],
+    );
+  }
+
+  Widget _buildRemoteControlSection(BuildContext context) {
+    final theme = Theme.of(context);
+    final accessibilityEnabled = _accessibilityEnabled ?? false;
+
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Contrôle à distance (expérimental)',
+              style: theme.textTheme.titleMedium,
+            ),
+            const SizedBox(height: 4),
+            Text(
+              'Permet de cliquer sur l\'image dans le navigateur du récepteur '
+              'pour reproduire un appui sur l\'écran du téléphone.',
+              style: theme.textTheme.bodySmall,
+            ),
+            const SizedBox(height: 12),
+            Container(
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(
+                color: theme.colorScheme.errorContainer,
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Icon(
+                    Icons.warning_amber_rounded,
+                    size: 18,
+                    color: theme.colorScheme.onErrorContainer,
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      'Tant que c\'est activé, n\'importe qui atteignant '
+                      'l\'adresse du flux sur le réseau local peut contrôler '
+                      'cet écran. À n\'activer que sur un réseau de confiance, '
+                      'et à désactiver juste après usage.',
+                      style: TextStyle(
+                        color: theme.colorScheme.onErrorContainer,
+                        fontSize: 12,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 12),
+            if (!accessibilityEnabled) ...[
+              Text(
+                'Nécessite le service d\'accessibilité SWVERTEX, à activer '
+                'manuellement dans les réglages Android.',
+                style: theme.textTheme.bodySmall,
+              ),
+              const SizedBox(height: 8),
+              Row(
+                children: [
+                  OutlinedButton(
+                    onPressed: _openAccessibilitySettings,
+                    child: const Text('Activer le service d\'accessibilité'),
+                  ),
+                  const SizedBox(width: 8),
+                  IconButton(
+                    onPressed: _refreshRemoteControlStatus,
+                    icon: const Icon(Icons.refresh),
+                    tooltip: 'Vérifier à nouveau',
+                  ),
+                ],
+              ),
+            ] else
+              Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      _remoteControlEnabled
+                          ? 'Contrôle à distance actif'
+                          : 'Contrôle à distance désactivé',
+                      style: theme.textTheme.bodyMedium,
+                    ),
+                  ),
+                  if (_remoteControlBusy)
+                    const SizedBox(
+                      width: 20,
+                      height: 20,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
+                  else
+                    Switch(
+                      value: _remoteControlEnabled,
+                      onChanged: _toggleRemoteControl,
+                    ),
+                ],
+              ),
+          ],
+        ),
+      ),
     );
   }
 

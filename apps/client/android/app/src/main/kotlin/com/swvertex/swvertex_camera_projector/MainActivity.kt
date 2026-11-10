@@ -1,11 +1,14 @@
 package com.swvertex.swvertex_camera_projector
 
+import android.accessibilityservice.AccessibilityServiceInfo
 import android.app.Activity
 import android.content.Intent
 import android.media.projection.MediaProjectionManager
 import android.os.Build
 import android.os.Handler
 import android.os.Looper
+import android.provider.Settings
+import android.view.accessibility.AccessibilityManager
 import io.flutter.embedding.android.FlutterActivity
 import io.flutter.embedding.engine.FlutterEngine
 import io.flutter.plugin.common.MethodChannel
@@ -36,6 +39,16 @@ class MainActivity : FlutterActivity() {
                     startService(stopIntent)
                     result.success(statusMap())
                 }
+                "isAccessibilityServiceEnabled" -> result.success(isRemoteControlAccessibilityEnabled())
+                "openAccessibilitySettings" -> {
+                    startActivity(Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS))
+                    result.success(null)
+                }
+                "setRemoteControlEnabled" -> {
+                    ScreenStreamService.remoteControlEnabled = call.argument<Boolean>("enabled") == true
+                    result.success(ScreenStreamService.remoteControlEnabled)
+                }
+                "isRemoteControlEnabled" -> result.success(ScreenStreamService.remoteControlEnabled)
                 else -> result.notImplemented()
             }
         }
@@ -95,6 +108,14 @@ class MainActivity : FlutterActivity() {
             "url" to if (ip != null && port > 0) "http://$ip:$port/" else null,
             "error" to ScreenStreamService.lastError,
         )
+    }
+
+    private fun isRemoteControlAccessibilityEnabled(): Boolean {
+        val manager = getSystemService(ACCESSIBILITY_SERVICE) as AccessibilityManager
+        val enabledServices = manager.getEnabledAccessibilityServiceList(
+            AccessibilityServiceInfo.FEEDBACK_GENERIC,
+        )
+        return enabledServices.any { it.resolveInfo.serviceInfo.packageName == packageName }
     }
 
     private fun localIpv4(): String? {

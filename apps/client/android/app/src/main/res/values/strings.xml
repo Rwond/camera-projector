@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="remote_control_service_description">
+        Permet de rejouer les appuis envoyés depuis le récepteur pendant une
+        projection SWVERTEX (prototype labo). Tant que ce service est activé
+        ET que le contrôle à distance est autorisé dans l\'application,
+        quiconque atteint l\'adresse du flux sur le réseau local peut
+        contrôler cet écran.
+    </string>
+</resources>
