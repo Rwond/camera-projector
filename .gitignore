@@ -14,6 +14,16 @@ npm-debug.log*
 !.env.example
 !.env.local.example
 
+# Secrets / signing
+*.pem
+*.key
+*.p12
+*.pfx
+*.keystore
+*.jks
+key.properties
+local.properties
+
 # Prisma
 services/backend/src/generated/
 
