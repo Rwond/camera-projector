@@ -48,6 +48,16 @@ class ProjectionScreen extends StatefulWidget {
 }
 
 class _ProjectionScreenState extends State<ProjectionScreen> {
+  // Le thème global donne aux boutons un minimumSize plein-largeur
+  // (Size.fromHeight), pensé pour un bouton seul dans une Column. Placé dans
+  // un Row/Wrap à côté d'un autre widget, ce minWidth infini fait planter le
+  // layout ("BoxConstraints forces an infinite width") — vérifié en conditions
+  // réelles (écran entièrement noir sur un vrai téléphone). On le neutralise
+  // ici pour les boutons qui partagent leur ligne avec un autre widget.
+  static const _rowButtonStyle = ButtonStyle(
+    minimumSize: WidgetStatePropertyAll(Size.zero),
+  );
+
   ProjectionStatus? _status;
   String? _error;
   bool _busy = false;
@@ -405,11 +415,13 @@ class _ProjectionScreenState extends State<ProjectionScreen> {
                     runSpacing: 8,
                     children: [
                       OutlinedButton.icon(
+                        style: _rowButtonStyle,
                         onPressed: _copyUrl,
                         icon: const Icon(Icons.copy, size: 18),
                         label: const Text('Copier l\'adresse'),
                       ),
                       OutlinedButton.icon(
+                        style: _rowButtonStyle,
                         onPressed: _shareUrl,
                         icon: const Icon(Icons.share, size: 18),
                         label: const Text('Partager le lien'),
@@ -600,6 +612,7 @@ class _ProjectionScreenState extends State<ProjectionScreen> {
               Row(
                 children: [
                   OutlinedButton(
+                    style: _rowButtonStyle,
                     onPressed: _openAccessibilitySettings,
                     child: const Text('Activer le service d\'accessibilité'),
                   ),
@@ -684,6 +697,7 @@ class _ProjectionScreenState extends State<ProjectionScreen> {
                         ),
                       ),
                       FilledButton(
+                        style: _rowButtonStyle,
                         onPressed: (!_running || isConnecting)
                             ? null
                             : () => _connectTo(receiver),
@@ -778,6 +792,7 @@ class _ProjectionScreenState extends State<ProjectionScreen> {
                         ),
                       ),
                       FilledButton(
+                        style: _rowButtonStyle,
                         onPressed: (!_running || isCasting)
                             ? null
                             : () => _castToDlna(renderer),
