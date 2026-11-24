@@ -12,8 +12,8 @@ Accueil, Spaces, Sources, Appareils, Réglages.
 
 - **Accueil** : action principale (démarrer une projection Mode B) + accès rapide aux autres
   prototypes réels.
-- **Spaces** : fonctionnalité pas encore construite — l'écran l'annonce honnêtement au lieu de
-  simuler une liste d'espaces (`spaces_tab.dart`).
+- **Spaces** : réel — un Space regroupe des récepteurs (PC/TV ayant déjà ouvert « Recevoir une
+  projection ») pour diffuser vers tous en un geste. Voir la section dédiée plus bas.
 - **Sources** : bibliothèque de types de source. Seuls « Écran » (Mode B) et « Lentille »
   (Mode C) sont cliquables ; les autres types apparaissent grisés « À venir ».
 - **Appareils** : écran existant (`devices_screen.dart`), inchangé fonctionnellement.
@@ -105,6 +105,29 @@ et de toute façon dépendant des décisions encore ouvertes dans `docs/decision
 
 Vérifié pour de vrai entre un téléphone Android et un PC Windows sur le même réseau Wi-Fi :
 découverte, demande d'autorisation et affichage du flux sans navigateur fonctionnent bout en bout.
+
+### Spaces : diffuser vers plusieurs récepteurs enregistrés
+
+Onglet « Spaces » de l'accueil (`lib/features/home/spaces_tab.dart`,
+`lib/features/spaces/`) : un Space est un groupe nommé de récepteurs, construit entièrement
+sur la connexion directe ci-dessus — **pas** une session serveur partagée, purement local à
+cet appareil (persisté via `shared_preferences`, survit aux relances de l'app).
+
+Utilisation :
+
+1. Depuis l'onglet Spaces, les récepteurs détectés sur le réseau (même mécanisme de découverte
+   UDP que la connexion directe) peuvent être ajoutés à un Space nouveau ou existant.
+2. Depuis l'écran mode B, une fois la capture démarrée, la section « Spaces » liste les Spaces
+   créés avec un bouton « Diffuser » : envoie une demande de connexion à chaque membre
+   actuellement détecté sur le réseau, séquentiellement, et affiche le résultat par membre
+   (connecté/refusé/hors ligne/échec).
+
+Rapprochement honnête, pas magique : un membre est identifié par **nom d'appareil** (stable),
+pas par adresse/port (qui changent à chaque relance de l'écran récepteur — port TCP éphémère,
+adresse DHCP). Un membre enregistré mais non détecté sur le réseau au moment de diffuser est
+affiché « hors ligne », jamais simulé comme connecté. Spaces hérite donc exactement des mêmes
+limites que la connexion directe (Wi-Fi local uniquement, pas de confirmation automatique côté
+récepteur).
 
 ### QR code et partage du lien
 

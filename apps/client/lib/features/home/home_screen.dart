@@ -39,7 +39,7 @@ class _HomeScreenState extends State<HomeScreen> {
   Widget build(BuildContext context) {
     final pages = [
       HomeTab(devicesService: widget.devicesService, onOpenTab: _openTab),
-      SpacesTab(onOpenSources: () => _openTab(2)),
+      const SpacesTab(),
       const SourcesTab(),
       DevicesScreen(devicesService: widget.devicesService),
       SettingsTab(authService: widget.authService, onLoggedOut: widget.onLoggedOut),

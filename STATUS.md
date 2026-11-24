@@ -2,7 +2,7 @@
 
 Convention : une ligne passe en **Terminé** seulement si elle est implémentée ET testée (automatiquement ou manuellement, avec preuve). "Scaffold" = structure posée, aucune logique métier encore écrite.
 
-Dernière mise à jour : 2026-11-05.
+Dernière mise à jour : 2026-11-24.
 
 ## Terminé
 
@@ -167,6 +167,19 @@ Dernière mise à jour : 2026-11-05.
   d'autorisation et affichage du flux sans navigateur confirmés bout en bout. **Wi-Fi local
   uniquement** : ni Bluetooth ni câble USB ne sont implémentés (chacun demanderait un module natif
   par plateforme, non construit ici).
+- **Spaces (groupes de récepteurs, client Flutter)** : un Space regroupe des récepteurs
+  enregistrés (découverts puis ajoutés depuis l'onglet « Spaces ») pour diffuser vers tous en un
+  geste depuis l'écran mode B (`lib/features/spaces/`, `lib/features/home/spaces_tab.dart`).
+  Persisté localement (`shared_preferences`), construit entièrement sur la connexion directe
+  déjà réelle — pas de session serveur partagée. Rapprochement par nom d'appareil (stable),
+  jamais par adresse/port (éphémères) ; un membre non détecté au moment de diffuser est marqué
+  « hors ligne », jamais simulé comme connecté. `flutter analyze`/`flutter test` passent,
+  y compris des tests de bout en bout avec de vraies sockets en boucle locale (création/
+  renommage/suppression d'un Space, ajout/retrait d'un membre, diffusion vers un membre en ligne
+  et un membre hors ligne simultanément). **Vérifié visuellement dans le navigateur**
+  (`flutter build web --debug`) : états vides honnêtes (aucun récepteur détecté, aucun Space
+  créé), création d'un Space depuis la boîte de dialogue. Mêmes limites que la connexion
+  directe : Wi-Fi local uniquement, pas de confirmation automatique côté récepteur.
 - **QR code + partage du lien (mode B classique)** : QR code encodant l'adresse et bouton
   « Partager le lien » (menu de partage natif, Bluetooth inclus pour le *texte* de l'adresse, pas la
   vidéo) sur l'écran mode B. `flutter analyze`/`flutter test` passent.
@@ -206,9 +219,10 @@ Dernière mise à jour : 2026-11-05.
 - Admin : tous les écrans prévus pour l'existant backend sont en place (comptes/rôles, accessoires,
   compatibilité, CMS, support, journal d'audit). Pas de rafraîchissement automatique du jeton expiré
   (15 min) — l'utilisateur doit se reconnecter manuellement.
-- Client Flutter : l'authentification, la gestion des appareils, et deux prototypes labo (mode B
-  Android, mode C lentille) existent. La bibliothèque de contenus, le contrôle de session, et les
-  implémentations finales des trois modes de projection restent à faire.
+- Client Flutter : l'authentification, la gestion des appareils, deux prototypes labo (mode B
+  Android, mode C lentille) et les Spaces (groupes de récepteurs, voir « En cours ») existent. La
+  bibliothèque de contenus et les implémentations finales des trois modes de projection restent
+  à faire.
 - Mode A (module USB-C) : non démarré — dépend des décisions matérielles/commerciales du §18.
 - Mode B (projecteur Wi-Fi) et Mode C (lentille) : prototypes labo en place (voir « En cours »),
   mais les implémentations finales (Miracast/DLNA pour B, accessoire optique réel pour C) dépendent

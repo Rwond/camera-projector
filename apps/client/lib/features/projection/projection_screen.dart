@@ -8,10 +8,14 @@ import 'package:qr_flutter/qr_flutter.dart';
 import 'package:share_plus/share_plus.dart';
 
 import '../../core/device_name.dart';
+import '../spaces/space.dart';
+import '../spaces/spaces_service.dart';
 import 'discovery_service.dart';
 import 'dlna_service.dart';
 import 'pairing_service.dart';
 import 'projection_service.dart';
+
+enum _CastResult { connecting, connected, refused, offline, error }
 
 /// Écran de test "labo" du mode B : capture l'écran Android et le diffuse en MJPEG
 /// sur le réseau local. Ce n'est pas encore l'implémentation finale du mode B.
@@ -24,6 +28,8 @@ class ProjectionScreen extends StatefulWidget {
     this.enableScanning = true,
     this.receiversOverride,
     this.dlnaService = const DlnaCastService(),
+    this.spacesService = const SpacesService(),
+    this.spacesOverride,
   });
 
   final ProjectionService service;
@@ -42,6 +48,12 @@ class ProjectionScreen extends StatefulWidget {
   final List<DiscoveredReceiver>? receiversOverride;
 
   final DlnaCastService dlnaService;
+
+  final SpacesService spacesService;
+
+  /// Liste de Spaces à afficher telle quelle (tests), à la place de la
+  /// lecture réelle depuis le stockage local.
+  final List<Space>? spacesOverride;
 
   @override
   State<ProjectionScreen> createState() => _ProjectionScreenState();
@@ -79,6 +91,10 @@ class _ProjectionScreenState extends State<ProjectionScreen> {
   DlnaRenderer? _dlnaCasting;
   DlnaRenderer? _dlnaCastedTo;
 
+  List<Space> _spaces = const [];
+  String? _broadcastingSpaceId;
+  Map<String, _CastResult> _castResults = const {};
+
   bool get _isAndroid =>
       widget.isAndroidOverride ??
       (!kIsWeb && defaultTargetPlatform == TargetPlatform.android);
@@ -97,6 +113,62 @@ class _ProjectionScreenState extends State<ProjectionScreen> {
     } else if (widget.enableScanning) {
       unawaited(_startScanning());
     }
+    if (widget.spacesOverride != null) {
+      _spaces = widget.spacesOverride!;
+    } else {
+      unawaited(_loadSpaces());
+    }
+  }
+
+  Future<void> _loadSpaces() async {
+    final spaces = await widget.spacesService.list();
+    if (mounted) setState(() => _spaces = spaces);
+  }
+
+  DiscoveredReceiver? _matchingReceiver(SpaceMember member) {
+    for (final r in _receivers) {
+      if (r.name.trim().toLowerCase() == member.key) return r;
+    }
+    return null;
+  }
+
+  Future<void> _broadcastToSpace(Space space) async {
+    final status = _status;
+    if (status?.ip == null || status?.port == null) return;
+    setState(() {
+      _broadcastingSpaceId = space.id;
+      _castResults = {for (final m in space.members) m.key: _CastResult.connecting};
+    });
+    for (final member in space.members) {
+      final receiver = _matchingReceiver(member);
+      if (receiver == null) {
+        if (mounted) {
+          setState(() => _castResults = {..._castResults, member.key: _CastResult.offline});
+        }
+        continue;
+      }
+      try {
+        final accepted = await widget.pairingClient.requestConnection(
+          receiverAddress: InternetAddress(receiver.address),
+          receiverPort: receiver.pairPort,
+          fromName: defaultDeviceName(),
+          streamUrl: 'http://${status!.ip}:${status.port}/stream',
+        );
+        if (mounted) {
+          setState(() {
+            _castResults = {
+              ..._castResults,
+              member.key: accepted ? _CastResult.connected : _CastResult.refused,
+            };
+          });
+        }
+      } catch (_) {
+        if (mounted) {
+          setState(() => _castResults = {..._castResults, member.key: _CastResult.error});
+        }
+      }
+    }
+    if (mounted) setState(() => _broadcastingSpaceId = null);
   }
 
   Future<void> _startScanning() async {
@@ -480,6 +552,10 @@ class _ProjectionScreenState extends State<ProjectionScreen> {
         _buildRemoteControlSection(context),
         const SizedBox(height: 20),
         _buildDirectConnectionSection(context),
+        if (_spaces.isNotEmpty) ...[
+          const SizedBox(height: 20),
+          _buildSpacesSection(context),
+        ],
         const SizedBox(height: 20),
         _buildDlnaSection(context),
         const SizedBox(height: 20),
@@ -541,6 +617,13 @@ class _ProjectionScreenState extends State<ProjectionScreen> {
                   'téléviseurs DLNA attendent un format vidéo standard '
                   '(MP4/H.264), pas un flux multipart continu. Jamais '
                   'vérifié contre une vraie Smart TV dans cet environnement.',
+                ),
+                const Text(
+                  '• Spaces : repose entièrement sur la connexion directe '
+                  'ci-dessus, donc les mêmes limites (Wi-Fi local, pas de '
+                  'confirmation automatique) — un membre non détecté sur le '
+                  'réseau au moment de diffuser est marqué « hors ligne », '
+                  'jamais simulé comme connecté.',
                 ),
               ],
             ),
@@ -733,6 +816,96 @@ class _ProjectionScreenState extends State<ProjectionScreen> {
       ),
     );
   }
+
+  Widget _buildSpacesSection(BuildContext context) {
+    final theme = Theme.of(context);
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('Spaces', style: theme.textTheme.titleMedium),
+            const SizedBox(height: 4),
+            Text(
+              'Diffuse vers tous les récepteurs enregistrés d\'un Space en un '
+              'geste. Gérer les Spaces depuis l\'onglet « Spaces » de '
+              'l\'accueil.',
+              style: theme.textTheme.bodySmall,
+            ),
+            const SizedBox(height: 12),
+            ..._spaces.map((space) {
+              final isBroadcasting = _broadcastingSpaceId == space.id;
+              return Padding(
+                padding: const EdgeInsets.only(bottom: 10),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Icon(Icons.hub_outlined, color: theme.colorScheme.primary),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Text(
+                            '${space.name} (${space.members.length} membre${space.members.length > 1 ? 's' : ''})',
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                        FilledButton(
+                          style: _rowButtonStyle,
+                          onPressed: (!_running || isBroadcasting || space.members.isEmpty)
+                              ? null
+                              : () => _broadcastToSpace(space),
+                          child: isBroadcasting
+                              ? const SizedBox(
+                                  width: 16,
+                                  height: 16,
+                                  child: CircularProgressIndicator(strokeWidth: 2),
+                                )
+                              : const Text('Diffuser'),
+                        ),
+                      ],
+                    ),
+                    for (final member in space.members)
+                      if (_castResults[member.key] != null)
+                        Padding(
+                          padding: const EdgeInsets.only(left: 36, top: 2),
+                          child: Text(
+                            '${member.name} : ${_castResultLabel(_castResults[member.key]!)}',
+                            style: theme.textTheme.bodySmall?.copyWith(
+                              color: _castResultColor(theme, _castResults[member.key]!),
+                            ),
+                          ),
+                        ),
+                  ],
+                ),
+              );
+            }),
+            if (!_running)
+              Text(
+                'Démarre la capture pour pouvoir diffuser vers un Space.',
+                style: theme.textTheme.bodySmall,
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  String _castResultLabel(_CastResult result) => switch (result) {
+    _CastResult.connecting => 'connexion…',
+    _CastResult.connected => 'connecté',
+    _CastResult.refused => 'refusé',
+    _CastResult.offline => 'hors ligne (non détecté sur le réseau)',
+    _CastResult.error => 'échec de connexion',
+  };
+
+  Color _castResultColor(ThemeData theme, _CastResult result) => switch (result) {
+    _CastResult.connected => theme.colorScheme.primary,
+    _CastResult.refused || _CastResult.error => theme.colorScheme.error,
+    _CastResult.offline => theme.colorScheme.onSurfaceVariant,
+    _CastResult.connecting => theme.colorScheme.onSurfaceVariant,
+  };
 
   Widget _buildDlnaSection(BuildContext context) {
     final theme = Theme.of(context);
