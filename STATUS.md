@@ -180,6 +180,12 @@ Dernière mise à jour : 2026-11-24.
   (`flutter build web --debug`) : états vides honnêtes (aucun récepteur détecté, aucun Space
   créé), création d'un Space depuis la boîte de dialogue. Mêmes limites que la connexion
   directe : Wi-Fi local uniquement, pas de confirmation automatique côté récepteur.
+- **Source « Photos » (client Flutter)** : choisit une photo du téléphone (`file_picker`) et
+  l'affiche en plein écran (`lib/features/photos/photo_viewer_screen.dart`), accessible depuis
+  l'onglet Sources. Ne diffuse rien par elle-même — à combiner avec le Mode B (capture d'écran)
+  ou Smart TV (DLNA), déjà réels, pour projeter ce qui est affiché sur un autre appareil.
+  `flutter analyze`/`flutter test` passent (choix d'image, activation du plein écran, fermeture
+  au toucher). Vérifié visuellement dans le navigateur.
 - **QR code + partage du lien (mode B classique)** : QR code encodant l'adresse et bouton
   « Partager le lien » (menu de partage natif, Bluetooth inclus pour le *texte* de l'adresse, pas la
   vidéo) sur l'écran mode B. `flutter analyze`/`flutter test` passent.
@@ -220,9 +226,9 @@ Dernière mise à jour : 2026-11-24.
   compatibilité, CMS, support, journal d'audit). Pas de rafraîchissement automatique du jeton expiré
   (15 min) — l'utilisateur doit se reconnecter manuellement.
 - Client Flutter : l'authentification, la gestion des appareils, deux prototypes labo (mode B
-  Android, mode C lentille) et les Spaces (groupes de récepteurs, voir « En cours ») existent. La
-  bibliothèque de contenus et les implémentations finales des trois modes de projection restent
-  à faire.
+  Android, mode C lentille), les Spaces (groupes de récepteurs) et la source Photos (voir
+  « En cours ») existent. La bibliothèque de contenus vidéo/documents et les implémentations
+  finales des trois modes de projection restent à faire.
 - Mode A (module USB-C) : non démarré — dépend des décisions matérielles/commerciales du §18.
 - Mode B (projecteur Wi-Fi) et Mode C (lentille) : prototypes labo en place (voir « En cours »),
   mais les implémentations finales (Miracast/DLNA pour B, accessoire optique réel pour C) dépendent

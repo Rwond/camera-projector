@@ -14,8 +14,9 @@ Accueil, Spaces, Sources, Appareils, Réglages.
   prototypes réels.
 - **Spaces** : réel — un Space regroupe des récepteurs (PC/TV ayant déjà ouvert « Recevoir une
   projection ») pour diffuser vers tous en un geste. Voir la section dédiée plus bas.
-- **Sources** : bibliothèque de types de source. Seuls « Écran » (Mode B) et « Lentille »
-  (Mode C) sont cliquables ; les autres types apparaissent grisés « À venir ».
+- **Sources** : bibliothèque de types de source. « Écran » (Mode B), « Lentille » (Mode C) et
+  « Photos » (visionneuse plein écran, voir plus bas) sont cliquables ; les autres types
+  apparaissent grisés « À venir ».
 - **Appareils** : écran existant (`devices_screen.dart`), inchangé fonctionnellement.
 - **Réglages** : uniquement des réglages réels (déconnexion) — pas de bascule thème clair/sombre
   factice, l'app reste volontairement sombre uniquement (voir `theme/app_theme.dart`).
@@ -197,6 +198,15 @@ spécifiée par ce projet (voir `docs/decisions-a-valider.md`) ; l'orientation
 (aucun/horizontal/vertical/180°) est donc réglable manuellement en attendant un choix
 d'accessoire définitif. La luminosité logicielle maximale n'est pas disponible sur
 toutes les plateformes (ex. web) : l'écran reste utilisable sans elle.
+
+## Source « Photos »
+
+Onglet Sources → « Photos » (`lib/features/photos/photo_viewer_screen.dart`) : choisit une
+photo du téléphone (`file_picker`) et l'affiche en plein écran. **Ne diffuse rien par
+elle-même** — c'est un visionneur, pas un module de streaming. Pour projeter la photo
+affichée sur un autre appareil, combiner avec le Mode B (capture d'écran) ou Smart TV (DLNA)
+déjà réels : ces derniers capturent/diffusent ce qui est à l'écran, quel que soit son contenu,
+donc fonctionnent aussi bien avec cette visionneuse qu'avec n'importe quel autre écran.
 
 ## Stockage et sécurité
 

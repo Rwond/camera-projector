@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../lens/lens_projection_screen.dart';
+import '../photos/photo_viewer_screen.dart';
 import '../projection/projection_screen.dart';
 
 class _SourceType {
@@ -29,17 +30,22 @@ final _sourceTypes = <_SourceType>[
     builder: (_) => const LensProjectionScreen(),
   ),
   const _SourceType(icon: Icons.photo_camera_outlined, label: 'Caméra'),
-  const _SourceType(icon: Icons.photo_outlined, label: 'Photos'),
+  _SourceType(
+    icon: Icons.photo_outlined,
+    label: 'Photos',
+    builder: (_) => const PhotoViewerScreen(),
+  ),
   const _SourceType(icon: Icons.play_circle_outline, label: 'Vidéos'),
   const _SourceType(icon: Icons.description_outlined, label: 'Documents'),
   const _SourceType(icon: Icons.slideshow_outlined, label: 'Présentations'),
   const _SourceType(icon: Icons.draw_outlined, label: 'Tableau blanc'),
 ];
 
-/// Bibliothèque des sources de projection. Seules « Écran » et « Lentille »
-/// sont réellement implémentées aujourd'hui ; les autres apparaissent
-/// grisées plutôt que masquées, pour montrer la direction du produit sans
-/// prétendre qu'elles existent déjà (voir docs/decisions-a-valider.md).
+/// Bibliothèque des sources de projection. Seules « Écran », « Lentille » et
+/// « Photos » sont réellement implémentées aujourd'hui ; les autres
+/// apparaissent grisées plutôt que masquées, pour montrer la direction du
+/// produit sans prétendre qu'elles existent déjà (voir
+/// docs/decisions-a-valider.md).
 class SourcesTab extends StatelessWidget {
   const SourcesTab({super.key});
 
