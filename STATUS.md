@@ -2,7 +2,7 @@
 
 Convention : une ligne passe en **Terminé** seulement si elle est implémentée ET testée (automatiquement ou manuellement, avec preuve). "Scaffold" = structure posée, aucune logique métier encore écrite.
 
-Dernière mise à jour : 2026-11-24.
+Dernière mise à jour : 2026-11-24 (contrôle de session enrichi).
 
 ## Terminé
 
@@ -186,6 +186,20 @@ Dernière mise à jour : 2026-11-24.
   ou Smart TV (DLNA), déjà réels, pour projeter ce qui est affiché sur un autre appareil.
   `flutter analyze`/`flutter test` passent (choix d'image, activation du plein écran, fermeture
   au toucher). Vérifié visuellement dans le navigateur.
+- **Contrôle de session enrichi (écran mode B, client Flutter)** : historique local des
+  connexions (démarrages/arrêts de capture, connexion directe, diffusion Space, cast DLNA —
+  persisté via `shared_preferences`, jamais synchronisé, `lib/features/projection/
+  connection_history.dart`/`connection_history_service.dart`), carte « Diagnostic en direct »
+  (adresse réseau, durée de capture — honnêtement marquée « durée inconnue » si la capture
+  tournait déjà avant l'ouverture de l'écran plutôt que d'inventer une heure de départ,
+  nombre de connexions actives, dernier événement), et confirmation avant d'arrêter la
+  capture si une connexion directe/Space/DLNA est active (l'arrêt les couperait). `flutter
+  analyze`/`flutter test` passent, y compris un test de bout en bout avec de vraies sockets en
+  boucle locale (connexion directe journalisée dans l'historique et le diagnostic, dialogue de
+  confirmation annulé puis accepté, remise à zéro après arrêt réel). Vérifié que l'écran reste
+  fonctionnel dans un navigateur (le contenu Android de cet écran, diagnostic/historique
+  inclus, est honnêtement indisponible hors Android — seul le message « disponible uniquement
+  sur Android » y est vérifiable visuellement ; le reste est couvert par les tests).
 - **QR code + partage du lien (mode B classique)** : QR code encodant l'adresse et bouton
   « Partager le lien » (menu de partage natif, Bluetooth inclus pour le *texte* de l'adresse, pas la
   vidéo) sur l'écran mode B. `flutter analyze`/`flutter test` passent.

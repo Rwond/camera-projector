@@ -100,7 +100,15 @@ void main() {
     });
 
     await tester.pumpWidget(
-      const MaterialApp(home: ProjectionScreen(isAndroidOverride: true, enableScanning: false)),
+      const MaterialApp(
+        home: ProjectionScreen(
+          isAndroidOverride: true,
+          enableScanning: false,
+          // Un Timer périodique réel (diagnostic en direct) entre en conflit
+          // avec l'horloge virtuelle de pumpAndSettle hors de runAsync.
+          enableLiveClock: false,
+        ),
+      ),
     );
     await tester.pumpAndSettle();
 

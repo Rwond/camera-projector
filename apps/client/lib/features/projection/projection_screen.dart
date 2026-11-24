@@ -10,6 +10,8 @@ import 'package:share_plus/share_plus.dart';
 import '../../core/device_name.dart';
 import '../spaces/space.dart';
 import '../spaces/spaces_service.dart';
+import 'connection_history.dart';
+import 'connection_history_service.dart';
 import 'discovery_service.dart';
 import 'dlna_service.dart';
 import 'pairing_service.dart';
@@ -30,6 +32,9 @@ class ProjectionScreen extends StatefulWidget {
     this.dlnaService = const DlnaCastService(),
     this.spacesService = const SpacesService(),
     this.spacesOverride,
+    this.historyService = const ConnectionHistoryService(),
+    this.historyOverride,
+    this.enableLiveClock = true,
   });
 
   final ProjectionService service;
@@ -54,6 +59,17 @@ class ProjectionScreen extends StatefulWidget {
   /// Liste de Spaces à afficher telle quelle (tests), à la place de la
   /// lecture réelle depuis le stockage local.
   final List<Space>? spacesOverride;
+
+  final ConnectionHistoryService historyService;
+
+  /// Historique à afficher tel quel (tests), à la place de la lecture réelle
+  /// depuis le stockage local.
+  final List<ConnectionEvent>? historyOverride;
+
+  /// Désactivé dans les tests qui ne tournent pas sous [WidgetTester.runAsync] :
+  /// un Timer périodique réel entre en conflit avec l'horloge virtuelle de
+  /// `pumpAndSettle`, qui ne se stabilise alors jamais.
+  final bool enableLiveClock;
 
   @override
   State<ProjectionScreen> createState() => _ProjectionScreenState();
@@ -95,6 +111,11 @@ class _ProjectionScreenState extends State<ProjectionScreen> {
   String? _broadcastingSpaceId;
   Map<String, _CastResult> _castResults = const {};
 
+  List<ConnectionEvent> _history = const [];
+  DateTime? _captureStartedAt;
+  bool _startedByThisScreen = false;
+  Timer? _elapsedTicker;
+
   bool get _isAndroid =>
       widget.isAndroidOverride ??
       (!kIsWeb && defaultTargetPlatform == TargetPlatform.android);
@@ -118,11 +139,58 @@ class _ProjectionScreenState extends State<ProjectionScreen> {
     } else {
       unawaited(_loadSpaces());
     }
+    if (widget.historyOverride != null) {
+      _history = widget.historyOverride!;
+    } else {
+      unawaited(_loadHistory());
+    }
   }
 
   Future<void> _loadSpaces() async {
     final spaces = await widget.spacesService.list();
     if (mounted) setState(() => _spaces = spaces);
+  }
+
+  Future<void> _loadHistory() async {
+    final history = await widget.historyService.list();
+    if (mounted) setState(() => _history = history);
+  }
+
+  Future<void> _logEvent(
+    ConnectionEventType type,
+    String target,
+    ConnectionOutcome outcome,
+  ) async {
+    final event = ConnectionEvent(
+      timestamp: DateTime.now(),
+      type: type,
+      target: target,
+      outcome: outcome,
+    );
+    if (mounted) {
+      setState(() {
+        _history = [event, ..._history].take(ConnectionHistoryService.maxEntries).toList();
+      });
+    }
+    await widget.historyService.add(event);
+  }
+
+  Future<void> _clearHistory() async {
+    await widget.historyService.clear();
+    if (mounted) setState(() => _history = const []);
+  }
+
+  void _startElapsedTicker() {
+    if (!widget.enableLiveClock) return;
+    _elapsedTicker?.cancel();
+    _elapsedTicker = Timer.periodic(const Duration(seconds: 1), (_) {
+      if (mounted) setState(() {});
+    });
+  }
+
+  void _stopElapsedTicker() {
+    _elapsedTicker?.cancel();
+    _elapsedTicker = null;
   }
 
   DiscoveredReceiver? _matchingReceiver(SpaceMember member) {
@@ -140,11 +208,13 @@ class _ProjectionScreenState extends State<ProjectionScreen> {
       _castResults = {for (final m in space.members) m.key: _CastResult.connecting};
     });
     for (final member in space.members) {
+      final target = '${space.name} → ${member.name}';
       final receiver = _matchingReceiver(member);
       if (receiver == null) {
         if (mounted) {
           setState(() => _castResults = {..._castResults, member.key: _CastResult.offline});
         }
+        unawaited(_logEvent(ConnectionEventType.space, target, ConnectionOutcome.offline));
         continue;
       }
       try {
@@ -162,10 +232,16 @@ class _ProjectionScreenState extends State<ProjectionScreen> {
             };
           });
         }
+        unawaited(_logEvent(
+          ConnectionEventType.space,
+          target,
+          accepted ? ConnectionOutcome.connected : ConnectionOutcome.refused,
+        ));
       } catch (_) {
         if (mounted) {
           setState(() => _castResults = {..._castResults, member.key: _CastResult.error});
         }
+        unawaited(_logEvent(ConnectionEventType.space, target, ConnectionOutcome.error));
       }
     }
     if (mounted) setState(() => _broadcastingSpaceId = null);
@@ -207,8 +283,14 @@ class _ProjectionScreenState extends State<ProjectionScreen> {
             ? null
             : 'Connexion refusée par ${receiver.name}.';
       });
+      unawaited(_logEvent(
+        ConnectionEventType.direct,
+        receiver.name,
+        accepted ? ConnectionOutcome.connected : ConnectionOutcome.refused,
+      ));
     } catch (e) {
       if (mounted) setState(() => _connectError = 'Échec de connexion : $e');
+      unawaited(_logEvent(ConnectionEventType.direct, receiver.name, ConnectionOutcome.error));
     } finally {
       if (mounted) setState(() => _connectingTo = null);
     }
@@ -245,12 +327,14 @@ class _ProjectionScreenState extends State<ProjectionScreen> {
       );
       if (!mounted) return;
       setState(() => _dlnaCastedTo = renderer);
+      unawaited(_logEvent(ConnectionEventType.dlna, renderer.name, ConnectionOutcome.connected));
     } catch (e) {
       if (mounted) {
         setState(
           () => _dlnaError = '${renderer.name} n\'a pas accepté le flux : $e',
         );
       }
+      unawaited(_logEvent(ConnectionEventType.dlna, renderer.name, ConnectionOutcome.error));
     } finally {
       if (mounted) setState(() => _dlnaCasting = null);
     }
@@ -260,6 +344,7 @@ class _ProjectionScreenState extends State<ProjectionScreen> {
   void dispose() {
     _scanSubscription?.cancel();
     _scanner?.stop();
+    _stopElapsedTicker();
     if (_remoteControlEnabled) {
       // Ne laisse jamais le contrôle à distance actif après avoir quitté
       // cet écran : il doit être réautorisé consciemment à chaque fois.
@@ -349,17 +434,72 @@ class _ProjectionScreenState extends State<ProjectionScreen> {
         _status = status;
         _error = status.error;
       });
-      if (status.running) return;
+      if (status.running) {
+        if (_captureStartedAt == null) {
+          setState(() {
+            _captureStartedAt = DateTime.now();
+            _startedByThisScreen = true;
+          });
+          _startElapsedTicker();
+          unawaited(_logEvent(ConnectionEventType.capture, '', ConnectionOutcome.started));
+        }
+        return;
+      }
       await Future<void>.delayed(const Duration(milliseconds: 300));
     }
   }
 
+  /// Si une connexion directe, un membre de Space ou un cast DLNA est actif,
+  /// demande confirmation : arrêter la capture va les couper.
+  Future<bool> _confirmStopIfNeeded() async {
+    final hasActiveConnection = _connectedTo != null ||
+        _dlnaCastedTo != null ||
+        _castResults.values.any((r) => r == _CastResult.connected);
+    if (!hasActiveConnection) return true;
+    final result = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Arrêter la capture ?'),
+        content: const Text(
+          'Au moins une connexion est active. L\'arrêt de la capture va la '
+          'couper.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Annuler'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('Arrêter'),
+          ),
+        ],
+      ),
+    );
+    return result ?? false;
+  }
+
   Future<void> _stop() async {
+    if (!await _confirmStopIfNeeded()) return;
     setState(() => _busy = true);
     try {
       await widget.service.stop();
       await Future<void>.delayed(const Duration(milliseconds: 300));
       await _refreshStatus();
+      _stopElapsedTicker();
+      if (mounted) {
+        setState(() {
+          _connectedTo = null;
+          _connectError = null;
+          _dlnaCastedTo = null;
+          _dlnaError = null;
+          _castResults = {};
+          _broadcastingSpaceId = null;
+          _captureStartedAt = null;
+          _startedByThisScreen = false;
+        });
+      }
+      unawaited(_logEvent(ConnectionEventType.capture, '', ConnectionOutcome.stopped));
     } on MissingPluginException {
       _showUnsupported();
     } on PlatformException catch (e) {
@@ -558,6 +698,12 @@ class _ProjectionScreenState extends State<ProjectionScreen> {
         ],
         const SizedBox(height: 20),
         _buildDlnaSection(context),
+        if (_running) ...[
+          const SizedBox(height: 20),
+          _buildDiagnosticsSection(context),
+        ],
+        const SizedBox(height: 20),
+        _buildHistorySection(context),
         const SizedBox(height: 20),
         Text('Mode d\'emploi', style: theme.textTheme.titleMedium),
         const SizedBox(height: 8),
@@ -624,6 +770,14 @@ class _ProjectionScreenState extends State<ProjectionScreen> {
                   'confirmation automatique) — un membre non détecté sur le '
                   'réseau au moment de diffuser est marqué « hors ligne », '
                   'jamais simulé comme connecté.',
+                ),
+                const Text(
+                  '• Historique et diagnostic : stockés uniquement sur cet '
+                  'appareil, sans synchronisation. Le diagnostic n\'affiche '
+                  'que ce que l\'app sait réellement (adresse, durée depuis '
+                  'l\'ouverture de cet écran, dernier événement) — pas de '
+                  'débit image ni de qualité de réseau, qui ne sont pas '
+                  'mesurés.',
                 ),
               ],
             ),
@@ -998,6 +1152,171 @@ class _ProjectionScreenState extends State<ProjectionScreen> {
               'envoyée.',
               style: theme.textTheme.bodySmall,
             ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildDiagnosticsSection(BuildContext context) {
+    final theme = Theme.of(context);
+    final activeConnections = (_connectedTo != null ? 1 : 0) +
+        _castResults.values.where((r) => r == _CastResult.connected).length +
+        (_dlnaCastedTo != null ? 1 : 0);
+    final address = (_status?.ip != null && _status?.port != null)
+        ? '${_status!.ip}:${_status!.port}'
+        : 'Indisponible';
+    final duration = (_startedByThisScreen && _captureStartedAt != null)
+        ? _formatDuration(DateTime.now().difference(_captureStartedAt!))
+        : 'Active avant l\'ouverture de cet écran (durée inconnue)';
+    final lastEvent = _history.isNotEmpty ? _eventLine(_history.first) : 'Aucun';
+
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('Diagnostic en direct', style: theme.textTheme.titleMedium),
+            const SizedBox(height: 12),
+            _DiagnosticRow(label: 'Adresse', value: address),
+            _DiagnosticRow(label: 'Durée de capture', value: duration),
+            _DiagnosticRow(label: 'Connexions actives', value: '$activeConnections'),
+            _DiagnosticRow(label: 'Dernier événement', value: lastEvent),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildHistorySection(BuildContext context) {
+    final theme = Theme.of(context);
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    'Historique des connexions',
+                    style: theme.textTheme.titleMedium,
+                  ),
+                ),
+                if (_history.isNotEmpty)
+                  TextButton(
+                    onPressed: _clearHistory,
+                    child: const Text('Effacer'),
+                  ),
+              ],
+            ),
+            const SizedBox(height: 4),
+            Text(
+              'Journal local à cet appareil : démarrages/arrêts de capture et '
+              'tentatives de connexion directe, Space ou Smart TV.',
+              style: theme.textTheme.bodySmall,
+            ),
+            const SizedBox(height: 12),
+            if (_history.isEmpty)
+              const Text('Aucun événement encore.')
+            else
+              ..._history.take(10).map(
+                (e) => Padding(
+                  padding: const EdgeInsets.only(bottom: 6),
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Icon(_eventIcon(e), size: 16, color: _eventColor(theme, e)),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(_eventLine(e), style: theme.textTheme.bodySmall),
+                      ),
+                      Text(
+                        _formatTime(e.timestamp),
+                        style: theme.textTheme.bodySmall?.copyWith(
+                          color: theme.colorScheme.onSurfaceVariant,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  String _eventTypeLabel(ConnectionEventType t) => switch (t) {
+    ConnectionEventType.capture => 'Capture',
+    ConnectionEventType.direct => 'Connexion directe',
+    ConnectionEventType.space => 'Space',
+    ConnectionEventType.dlna => 'Smart TV',
+  };
+
+  String _outcomeLabel(ConnectionOutcome o) => switch (o) {
+    ConnectionOutcome.started => 'démarrée',
+    ConnectionOutcome.stopped => 'arrêtée',
+    ConnectionOutcome.connected => 'connecté',
+    ConnectionOutcome.refused => 'refusé',
+    ConnectionOutcome.offline => 'hors ligne',
+    ConnectionOutcome.error => 'échec',
+  };
+
+  String _eventLine(ConnectionEvent e) {
+    if (e.type == ConnectionEventType.capture) {
+      return 'Capture ${_outcomeLabel(e.outcome)}';
+    }
+    return '${e.target} (${_eventTypeLabel(e.type)}) : ${_outcomeLabel(e.outcome)}';
+  }
+
+  IconData _eventIcon(ConnectionEvent e) => switch (e.outcome) {
+    ConnectionOutcome.connected || ConnectionOutcome.started => Icons.check_circle,
+    ConnectionOutcome.stopped => Icons.stop_circle_outlined,
+    ConnectionOutcome.refused || ConnectionOutcome.error => Icons.error,
+    ConnectionOutcome.offline => Icons.cloud_off,
+  };
+
+  Color _eventColor(ThemeData theme, ConnectionEvent e) => switch (e.outcome) {
+    ConnectionOutcome.connected || ConnectionOutcome.started => theme.colorScheme.primary,
+    ConnectionOutcome.refused || ConnectionOutcome.error => theme.colorScheme.error,
+    ConnectionOutcome.offline || ConnectionOutcome.stopped => theme.colorScheme.onSurfaceVariant,
+  };
+
+  String _formatTime(DateTime t) =>
+      '${t.hour.toString().padLeft(2, '0')}:${t.minute.toString().padLeft(2, '0')}:${t.second.toString().padLeft(2, '0')}';
+
+  String _formatDuration(Duration d) {
+    final h = d.inHours;
+    final m = d.inMinutes.remainder(60);
+    final s = d.inSeconds.remainder(60);
+    final mm = m.toString().padLeft(2, '0');
+    final ss = s.toString().padLeft(2, '0');
+    return h > 0 ? '${h}h ${mm}m ${ss}s' : '${m}m ${ss}s';
+  }
+}
+
+class _DiagnosticRow extends StatelessWidget {
+  const _DiagnosticRow({required this.label, required this.value});
+
+  final String label;
+  final String value;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    // Un seul Text (plutôt que label/valeur séparés) pour éviter toute
+    // ambiguïté avec d'autres chiffres affichés ailleurs sur l'écran.
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 6),
+      child: Text.rich(
+        TextSpan(
+          style: theme.textTheme.bodyMedium,
+          children: [
+            TextSpan(text: '$label : ', style: theme.textTheme.bodySmall),
+            TextSpan(text: value),
           ],
         ),
       ),

@@ -130,6 +130,28 @@ affiché « hors ligne », jamais simulé comme connecté. Spaces hérite donc e
 limites que la connexion directe (Wi-Fi local uniquement, pas de confirmation automatique côté
 récepteur).
 
+### Contrôle de session enrichi (historique local, arrêt confirmé, diagnostic)
+
+Sur l'écran mode B (`lib/features/projection/projection_screen.dart`,
+`connection_history.dart`/`connection_history_service.dart`) :
+
+- **Historique des connexions** : journal local (persisté via `shared_preferences`, comme
+  Spaces — jamais synchronisé) des démarrages/arrêts de capture et des tentatives de connexion
+  directe, Space ou Smart TV, avec résultat (connecté/refusé/hors ligne/échec) et horodatage.
+  Les 10 événements les plus récents sont affichés, 50 au total sont conservés ; un bouton
+  « Effacer » vide le journal.
+- **Diagnostic en direct** : pendant que la capture tourne, affiche l'adresse réseau, la durée
+  de capture (uniquement si démarrée depuis cet écran — sinon affiché honnêtement comme
+  « durée inconnue » plutôt que d'inventer une heure de départ), le nombre de connexions
+  actives (directe + Spaces + DLNA) et le dernier événement de l'historique.
+- **Arrêt confirmé** : si une connexion directe, un membre de Space ou un cast DLNA est
+  actif au moment d'arrêter la capture, une boîte de dialogue demande confirmation (l'arrêt
+  coupe ces connexions) avant d'agir ; sans connexion active, l'arrêt reste immédiat comme
+  avant.
+
+Honnêteté : comme pour Spaces, rien n'est synchronisé ni mesuré au-delà de ce que l'app sait
+réellement — pas de débit image ni de qualité réseau, qui ne sont pas mesurés ici.
+
 ### QR code et partage du lien
 
 Sur l'écran mode B classique (navigateur), la capture affiche en plus un QR code encodant l'adresse
