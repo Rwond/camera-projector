@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 
 import 'brand_colors.dart';
 
@@ -25,24 +26,46 @@ ThemeData buildAppTheme() {
 
   final base = ThemeData(colorScheme: colorScheme, useMaterial3: true);
 
+  // Corps de texte en Inter (très lisible dans une pièce sombre), titres en
+  // Space Grotesk (plus géométrique, fait écho au tracé du logo) — deux
+  // familles de Google Fonts embarquées, jamais de dépendance réseau au
+  // runtime (voir pubspec : google_fonts télécharge puis met en cache les
+  // fichiers une seule fois).
+  final textTheme = GoogleFonts.interTextTheme(base.textTheme);
+  final displayTheme = GoogleFonts.spaceGroteskTextTheme(base.textTheme);
+
   return base.copyWith(
     scaffoldBackgroundColor: BrandColors.ink,
-    textTheme: base.textTheme.copyWith(
-      // Les titres reprennent l'esprit « géométrique et espacé » du
-      // logotype ; le corps de texte reste au réglage par défaut pour
-      // rester aussi lisible que possible.
-      headlineSmall: base.textTheme.headlineSmall?.copyWith(
+    textTheme: textTheme.copyWith(
+      headlineSmall: displayTheme.headlineSmall?.copyWith(
         fontWeight: FontWeight.w700,
-        letterSpacing: 0.2,
+        letterSpacing: -0.2,
       ),
-      titleLarge: base.textTheme.titleLarge?.copyWith(
+      headlineMedium: displayTheme.headlineMedium?.copyWith(
         fontWeight: FontWeight.w700,
+        letterSpacing: -0.2,
       ),
-      titleMedium: base.textTheme.titleMedium?.copyWith(
-        fontWeight: FontWeight.w600,
+      titleLarge: displayTheme.titleLarge?.copyWith(fontWeight: FontWeight.w700),
+      titleMedium: displayTheme.titleMedium?.copyWith(fontWeight: FontWeight.w600),
+      titleSmall: displayTheme.titleSmall?.copyWith(fontWeight: FontWeight.w600),
+      labelLarge: textTheme.labelLarge?.copyWith(fontWeight: FontWeight.w600),
+    ),
+    appBarTheme: AppBarTheme(
+      centerTitle: false,
+      elevation: 0,
+      titleTextStyle: displayTheme.titleLarge?.copyWith(
+        fontWeight: FontWeight.w700,
+        color: colorScheme.onSurface,
       ),
     ),
-    appBarTheme: const AppBarTheme(centerTitle: false, elevation: 0),
+    navigationBarTheme: NavigationBarThemeData(
+      backgroundColor: BrandColors.surface,
+      indicatorColor: colorScheme.primary.withValues(alpha: 0.18),
+      labelTextStyle: WidgetStatePropertyAll(
+        textTheme.labelSmall?.copyWith(fontWeight: FontWeight.w600),
+      ),
+      height: 64,
+    ),
     filledButtonTheme: FilledButtonThemeData(
       style: FilledButton.styleFrom(
         minimumSize: const Size.fromHeight(48),
@@ -73,8 +96,10 @@ ThemeData buildAppTheme() {
     ),
     cardTheme: base.cardTheme.copyWith(
       elevation: 0,
+      color: BrandColors.surface,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(16),
+        side: const BorderSide(color: BrandColors.surfaceAlt),
       ),
     ),
   );

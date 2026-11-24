@@ -1,12 +1,18 @@
 import 'package:flutter/material.dart';
+
 import '../auth/auth_service.dart';
 import '../devices/devices_screen.dart';
 import '../devices/devices_service.dart';
-import '../lens/lens_projection_screen.dart';
-import '../projection/projection_screen.dart';
-import '../projection/receiver_screen.dart';
+import 'home_tab.dart';
+import 'settings_tab.dart';
+import 'spaces_tab.dart';
+import 'sources_tab.dart';
 
-class HomeScreen extends StatelessWidget {
+/// Coquille de navigation de l'app connectée : Accueil / Spaces / Sources /
+/// Appareils / Paramètres — cinq destinations, comme dans la maquette, mais
+/// chacune ne montre que des fonctionnalités réelles (ou l'annonce
+/// honnêtement quand ce n'est pas encore le cas, voir spaces_tab.dart).
+class HomeScreen extends StatefulWidget {
   const HomeScreen({
     super.key,
     required this.authService,
@@ -19,75 +25,40 @@ class HomeScreen extends StatelessWidget {
   final VoidCallback onLoggedOut;
 
   @override
+  State<HomeScreen> createState() => _HomeScreenState();
+}
+
+class _HomeScreenState extends State<HomeScreen> {
+  int _index = 0;
+
+  static const _titles = ['Accueil', 'Spaces', 'Sources', 'Appareils', 'Paramètres'];
+
+  void _openTab(int i) => setState(() => _index = i);
+
+  @override
   Widget build(BuildContext context) {
+    final pages = [
+      HomeTab(devicesService: widget.devicesService, onOpenTab: _openTab),
+      SpacesTab(onOpenSources: () => _openTab(2)),
+      const SourcesTab(),
+      DevicesScreen(devicesService: widget.devicesService),
+      SettingsTab(authService: widget.authService, onLoggedOut: widget.onLoggedOut),
+    ];
+
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('SWVERTEX'),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.logout),
-            tooltip: 'Déconnexion',
-            onPressed: () async {
-              await authService.logout();
-              onLoggedOut();
-            },
-          ),
+      appBar: AppBar(title: Text(_titles[_index])),
+      body: IndexedStack(index: _index, children: pages),
+      bottomNavigationBar: NavigationBar(
+        selectedIndex: _index,
+        onDestinationSelected: _openTab,
+        labelBehavior: NavigationDestinationLabelBehavior.onlyShowSelected,
+        destinations: const [
+          NavigationDestination(icon: Icon(Icons.home_outlined), selectedIcon: Icon(Icons.home), label: 'Accueil'),
+          NavigationDestination(icon: Icon(Icons.hub_outlined), selectedIcon: Icon(Icons.hub), label: 'Spaces'),
+          NavigationDestination(icon: Icon(Icons.video_library_outlined), selectedIcon: Icon(Icons.video_library), label: 'Sources'),
+          NavigationDestination(icon: Icon(Icons.devices_outlined), selectedIcon: Icon(Icons.devices), label: 'Appareils'),
+          NavigationDestination(icon: Icon(Icons.settings_outlined), selectedIcon: Icon(Icons.settings), label: 'Réglages'),
         ],
-      ),
-      body: Center(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const Text(
-              'Trois modes de projection : lentille, module USB-C, projecteur Wi-Fi.',
-            ),
-            const SizedBox(height: 24),
-            FilledButton.icon(
-              icon: const Icon(Icons.devices),
-              label: const Text('Mes appareils'),
-              onPressed: () {
-                Navigator.of(context).push(
-                  MaterialPageRoute(
-                    builder: (_) =>
-                        DevicesScreen(devicesService: devicesService),
-                  ),
-                );
-              },
-            ),
-            const SizedBox(height: 12),
-            OutlinedButton.icon(
-              icon: const Icon(Icons.cast),
-              label: const Text('Tester la projection (labo)'),
-              onPressed: () {
-                Navigator.of(context).push(
-                  MaterialPageRoute(builder: (_) => const ProjectionScreen()),
-                );
-              },
-            ),
-            const SizedBox(height: 12),
-            OutlinedButton.icon(
-              icon: const Icon(Icons.wb_sunny_outlined),
-              label: const Text('Projection par lentille (prototype)'),
-              onPressed: () {
-                Navigator.of(context).push(
-                  MaterialPageRoute(
-                    builder: (_) => const LensProjectionScreen(),
-                  ),
-                );
-              },
-            ),
-            const SizedBox(height: 12),
-            OutlinedButton.icon(
-              icon: const Icon(Icons.wifi_tethering),
-              label: const Text('Recevoir une projection (labo)'),
-              onPressed: () {
-                Navigator.of(context).push(
-                  MaterialPageRoute(builder: (_) => const ReceiverScreen()),
-                );
-              },
-            ),
-          ],
-        ),
       ),
     );
   }

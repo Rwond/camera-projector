@@ -21,4 +21,16 @@ abstract final class BrandColors {
   /// sombre colle à l'identité de marque ET à l'usage réel (projection dans
   /// une pièce sombre), ce n'est pas qu'esthétique.
   static const ink = Color(0xFF05070D);
+
+  /// Surface légèrement plus claire que [ink] pour les cartes/panneaux —
+  /// dérivée du fond de marque, pas une nouvelle teinte.
+  static const surface = Color(0xFF11151F);
+  static const surfaceAlt = Color(0xFF1A2030);
+
+  // Couleurs fonctionnelles (états), volontairement neutres et distinctes des
+  // couleurs de marque ci-dessus : elles signalent un état (actif/erreur),
+  // pas l'identité visuelle.
+  static const success = Color(0xFF34D399);
+  static const warning = Color(0xFFFBBF24);
+  static const danger = Color(0xFFF87171);
 }

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../core/api_client.dart';
+import '../../widgets/status_pill.dart';
 import 'devices_service.dart';
 
 const _deviceTypes = ['PHONE', 'COMPUTER', 'RECEIVER', 'ACCESSORY_CONTROLLER'];
@@ -85,8 +86,9 @@ class _DevicesScreenState extends State<DevicesScreen> {
 
   @override
   Widget build(BuildContext context) {
+    // Pas d'AppBar ici : cet écran est embarqué dans l'onglet « Appareils »
+    // de HomeScreen, qui fournit déjà le titre.
     return Scaffold(
-      appBar: AppBar(title: const Text('Mes appareils')),
       body: FutureBuilder<List<Device>>(
         future: _future,
         builder: (context, snapshot) {
@@ -103,17 +105,31 @@ class _DevicesScreenState extends State<DevicesScreen> {
           return RefreshIndicator(
             onRefresh: () async => _reload(),
             child: ListView.builder(
+              padding: const EdgeInsets.fromLTRB(16, 16, 16, 88),
               itemCount: devices.length,
               itemBuilder: (context, index) {
                 final device = devices[index];
-                return ListTile(
-                  leading: const Icon(Icons.devices),
-                  title: Text(device.model?.isNotEmpty == true ? device.model! : device.type),
-                  subtitle: Text('${device.platform} · ${device.status}'),
-                  trailing: IconButton(
-                    icon: const Icon(Icons.link_off),
-                    tooltip: 'Dissocier',
-                    onPressed: () => _revoke(device.id),
+                final active = device.status == 'ACTIVE';
+                return Card(
+                  margin: const EdgeInsets.only(bottom: 10),
+                  child: ListTile(
+                    leading: const Icon(Icons.devices),
+                    title: Text(device.model?.isNotEmpty == true ? device.model! : device.type),
+                    subtitle: Text(device.platform),
+                    trailing: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        StatusPill(
+                          label: active ? 'Actif' : 'Révoqué',
+                          tone: active ? StatusTone.positive : StatusTone.neutral,
+                        ),
+                        IconButton(
+                          icon: const Icon(Icons.link_off),
+                          tooltip: 'Dissocier',
+                          onPressed: active ? () => _revoke(device.id) : null,
+                        ),
+                      ],
+                    ),
                   ),
                 );
               },

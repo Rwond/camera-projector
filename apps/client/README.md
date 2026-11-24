@@ -5,6 +5,25 @@ Pour l'instant : authentification réelle et gestion des appareils associés au 
 directement l'API du backend. Aucun module natif (capture caméra/écran, USB-C, découverte Wi-Fi)
 n'est encore développé — voir STATUS.md.
 
+## Navigation de l'accueil (connecté)
+
+Une fois connecté, l'app affiche une coquille à 5 onglets (`lib/features/home/home_screen.dart`) :
+Accueil, Spaces, Sources, Appareils, Réglages.
+
+- **Accueil** : action principale (démarrer une projection Mode B) + accès rapide aux autres
+  prototypes réels.
+- **Spaces** : fonctionnalité pas encore construite — l'écran l'annonce honnêtement au lieu de
+  simuler une liste d'espaces (`spaces_tab.dart`).
+- **Sources** : bibliothèque de types de source. Seuls « Écran » (Mode B) et « Lentille »
+  (Mode C) sont cliquables ; les autres types apparaissent grisés « À venir ».
+- **Appareils** : écran existant (`devices_screen.dart`), inchangé fonctionnellement.
+- **Réglages** : uniquement des réglages réels (déconnexion) — pas de bascule thème clair/sombre
+  factice, l'app reste volontairement sombre uniquement (voir `theme/app_theme.dart`).
+
+Typographie : Space Grotesk (titres) + Inter (corps de texte), via le paquet `google_fonts`
+(polices embarquées, mises en cache localement après le premier lancement — aucune dépendance
+réseau au runtime une fois le cache rempli).
+
 ## Démarrage
 
 ```bash
