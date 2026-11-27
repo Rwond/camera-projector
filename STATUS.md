@@ -2,7 +2,7 @@
 
 Convention : une ligne passe en **Terminé** seulement si elle est implémentée ET testée (automatiquement ou manuellement, avec preuve). "Scaffold" = structure posée, aucune logique métier encore écrite.
 
-Dernière mise à jour : 2026-11-27 (sources Vidéos et Documents).
+Dernière mise à jour : 2026-11-27 (source Présentations).
 
 ## Terminé
 
@@ -201,6 +201,14 @@ Dernière mise à jour : 2026-11-27 (sources Vidéos et Documents).
   réellement et l'état honnête qui en résulte est vérifié). Vérifié visuellement dans le
   navigateur : Documents fonctionne de bout en bout (texte affiché, plein écran), Vidéos
   affiche correctement son message d'indisponibilité sur le Web.
+- **Source « Présentations » (client Flutter)** : `lib/features/presentations/
+  presentation_viewer_screen.dart` choisit une série d'images (sélection multiple) et les
+  affiche comme un diaporama plein écran navigable (précédent/suivant, compteur « X / N »,
+  position synchronisée entre l'écran principal et le plein écran). **Ne lit pas les fichiers
+  .pptx/.key/.odp eux-mêmes** — aucun moteur de rendu de présentation n'est construit, message
+  honnête affiché à la place (exporter en images depuis l'application d'origine). `flutter
+  analyze`/`flutter test` passent (60 tests). Vérifié visuellement dans le navigateur : état
+  vide honnête, message honnête sur les formats non pris en charge.
 - **Contrôle de session enrichi (écran mode B, client Flutter)** : historique local des
   connexions (démarrages/arrêts de capture, connexion directe, diffusion Space, cast DLNA —
   persisté via `shared_preferences`, jamais synchronisé, `lib/features/projection/
@@ -256,8 +264,8 @@ Dernière mise à jour : 2026-11-27 (sources Vidéos et Documents).
   (15 min) — l'utilisateur doit se reconnecter manuellement.
 - Client Flutter : l'authentification, la gestion des appareils, deux prototypes labo (mode B
   Android, mode C lentille), les Spaces (groupes de récepteurs), le contrôle de session
-  enrichi et les sources Photos/Vidéos/Documents (voir « En cours ») existent. Les sources
-  Présentations et Tableau blanc, ainsi que les implémentations finales des trois modes de
+  enrichi et les sources Photos/Vidéos/Documents/Présentations (voir « En cours ») existent.
+  La source Tableau blanc, ainsi que les implémentations finales des trois modes de
   projection, restent à faire.
 - Mode A (module USB-C) : non démarré — dépend des décisions matérielles/commerciales du §18.
 - Mode B (projecteur Wi-Fi) et Mode C (lentille) : prototypes labo en place (voir « En cours »),

@@ -15,8 +15,8 @@ Accueil, Spaces, Sources, Appareils, Réglages.
 - **Spaces** : réel — un Space regroupe des récepteurs (PC/TV ayant déjà ouvert « Recevoir une
   projection ») pour diffuser vers tous en un geste. Voir la section dédiée plus bas.
 - **Sources** : bibliothèque de types de source. « Écran » (Mode B), « Lentille » (Mode C),
-  « Photos », « Vidéos » et « Documents » (voir plus bas) sont cliquables ; les autres types
-  apparaissent grisés « À venir ».
+  « Photos », « Vidéos », « Documents » et « Présentations » (voir plus bas) sont cliquables ;
+  les autres types apparaissent grisés « À venir ».
 - **Appareils** : écran existant (`devices_screen.dart`), inchangé fonctionnellement.
 - **Réglages** : uniquement des réglages réels (déconnexion) — pas de bascule thème clair/sombre
   factice, l'app reste volontairement sombre uniquement (voir `theme/app_theme.dart`).
@@ -258,6 +258,20 @@ choisit un fichier et l'affiche en plein écran **uniquement s'il s'agit de text
 affiche un message honnête plutôt qu'un faux rendu — construire un moteur de rendu par format
 est un chantier à part entière, non entamé ici. Ne diffuse rien par elle-même, mêmes
 combinaisons que Photos/Vidéos pour projeter ailleurs.
+
+## Source « Présentations »
+
+Onglet Sources → « Présentations » (`lib/features/presentations/presentation_viewer_screen.dart`) :
+choisit une série d'images (sélection multiple) et les affiche comme un diaporama plein écran,
+navigable diapositive par diapositive (boutons précédent/suivant, compteur « X / N »). Choisir
+à nouveau remplace entièrement le diaporama en cours — pas d'ajout/suppression ciblée dans ce
+prototype.
+
+Honnêteté : **ne lit pas les fichiers `.pptx`/`.key`/`.odp` eux-mêmes** — aucun moteur de rendu
+de présentation n'est construit ici (chantier à part entière). Pour projeter une présentation
+existante, l'exporter en images (une par diapositive) depuis l'application d'origine, puis
+choisir ces images ici. Ne diffuse rien par elle-même, mêmes combinaisons que Photos/Vidéos/
+Documents (Mode B ou Smart TV DLNA) pour projeter ailleurs.
 
 ## Stockage et sécurité
 

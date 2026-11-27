@@ -45,6 +45,19 @@ void main() {
     expect(find.text('Document à afficher'), findsOneWidget);
   });
 
+  testWidgets('Présentations est disponible et ouvre la visionneuse', (tester) async {
+    tester.view.physicalSize = const Size(800, 1400);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.reset);
+
+    await tester.pumpWidget(const MaterialApp(home: SourcesTab()));
+
+    await tester.tap(find.text('Présentations'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Diaporama'), findsOneWidget);
+  });
+
   testWidgets('un type non implémenté affiche un message honnête au lieu d\'ouvrir un écran', (
     tester,
   ) async {

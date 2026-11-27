@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../documents/document_viewer_screen.dart';
 import '../lens/lens_projection_screen.dart';
 import '../photos/photo_viewer_screen.dart';
+import '../presentations/presentation_viewer_screen.dart';
 import '../projection/projection_screen.dart';
 import '../videos/video_viewer_screen.dart';
 
@@ -47,14 +48,18 @@ final _sourceTypes = <_SourceType>[
     label: 'Documents',
     builder: (_) => const DocumentViewerScreen(),
   ),
-  const _SourceType(icon: Icons.slideshow_outlined, label: 'Présentations'),
+  _SourceType(
+    icon: Icons.slideshow_outlined,
+    label: 'Présentations',
+    builder: (_) => const PresentationViewerScreen(),
+  ),
   const _SourceType(icon: Icons.draw_outlined, label: 'Tableau blanc'),
 ];
 
 /// Bibliothèque des sources de projection. « Écran », « Lentille », « Photos »,
-/// « Vidéos » et « Documents » sont réellement implémentées aujourd'hui ; les
-/// autres apparaissent grisées plutôt que masquées, pour montrer la direction
-/// du produit sans prétendre qu'elles existent déjà (voir
+/// « Vidéos », « Documents » et « Présentations » sont réellement implémentées
+/// aujourd'hui ; les autres apparaissent grisées plutôt que masquées, pour
+/// montrer la direction du produit sans prétendre qu'elles existent déjà (voir
 /// docs/decisions-a-valider.md).
 class SourcesTab extends StatelessWidget {
   const SourcesTab({super.key});
