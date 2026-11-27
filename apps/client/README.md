@@ -15,8 +15,8 @@ Accueil, Spaces, Sources, Appareils, Réglages.
 - **Spaces** : réel — un Space regroupe des récepteurs (PC/TV ayant déjà ouvert « Recevoir une
   projection ») pour diffuser vers tous en un geste. Voir la section dédiée plus bas.
 - **Sources** : bibliothèque de types de source. « Écran » (Mode B), « Lentille » (Mode C),
-  « Photos », « Vidéos », « Documents » et « Présentations » (voir plus bas) sont cliquables ;
-  les autres types apparaissent grisés « À venir ».
+  « Photos », « Vidéos », « Documents », « Présentations » et « Tableau blanc » (voir plus bas)
+  sont cliquables ; seule « Caméra » apparaît encore grisée « À venir ».
 - **Appareils** : écran existant (`devices_screen.dart`), inchangé fonctionnellement.
 - **Réglages** : uniquement des réglages réels (déconnexion) — pas de bascule thème clair/sombre
   factice, l'app reste volontairement sombre uniquement (voir `theme/app_theme.dart`).
@@ -272,6 +272,17 @@ de présentation n'est construit ici (chantier à part entière). Pour projeter 
 existante, l'exporter en images (une par diapositive) depuis l'application d'origine, puis
 choisir ces images ici. Ne diffuse rien par elle-même, mêmes combinaisons que Photos/Vidéos/
 Documents (Mode B ou Smart TV DLNA) pour projeter ailleurs.
+
+## Source « Tableau blanc »
+
+Onglet Sources → « Tableau blanc » (`lib/features/whiteboard/whiteboard_screen.dart`) :
+surface de dessin libre au doigt/souris, 5 couleurs et 3 épaisseurs de trait, annuler le
+dernier trait, tout effacer (avec confirmation — destructif). Rendu via `CustomPainter` pur
+Dart, sans dépendance native : fonctionne y compris sur le Web.
+
+Honnêteté : **le dessin n'est pas enregistré** — il est perdu en quittant cet écran (pas de
+sauvegarde, pas d'export image dans ce prototype). Ne diffuse rien par elle-même, mêmes
+combinaisons que les autres sources (Mode B ou Smart TV DLNA) pour projeter ailleurs.
 
 ## Stockage et sécurité
 

@@ -6,6 +6,7 @@ import '../photos/photo_viewer_screen.dart';
 import '../presentations/presentation_viewer_screen.dart';
 import '../projection/projection_screen.dart';
 import '../videos/video_viewer_screen.dart';
+import '../whiteboard/whiteboard_screen.dart';
 
 class _SourceType {
   const _SourceType({
@@ -53,14 +54,17 @@ final _sourceTypes = <_SourceType>[
     label: 'Présentations',
     builder: (_) => const PresentationViewerScreen(),
   ),
-  const _SourceType(icon: Icons.draw_outlined, label: 'Tableau blanc'),
+  _SourceType(
+    icon: Icons.draw_outlined,
+    label: 'Tableau blanc',
+    builder: (_) => const WhiteboardScreen(),
+  ),
 ];
 
-/// Bibliothèque des sources de projection. « Écran », « Lentille », « Photos »,
-/// « Vidéos », « Documents » et « Présentations » sont réellement implémentées
-/// aujourd'hui ; les autres apparaissent grisées plutôt que masquées, pour
-/// montrer la direction du produit sans prétendre qu'elles existent déjà (voir
-/// docs/decisions-a-valider.md).
+/// Bibliothèque des sources de projection. Toutes sont réellement implémentées
+/// aujourd'hui à l'exception de « Caméra », qui apparaît grisée plutôt que
+/// masquée, pour montrer la direction du produit sans prétendre qu'elle
+/// existe déjà (voir docs/decisions-a-valider.md).
 class SourcesTab extends StatelessWidget {
   const SourcesTab({super.key});
 

@@ -2,7 +2,7 @@
 
 Convention : une ligne passe en **Terminé** seulement si elle est implémentée ET testée (automatiquement ou manuellement, avec preuve). "Scaffold" = structure posée, aucune logique métier encore écrite.
 
-Dernière mise à jour : 2026-11-27 (source Présentations).
+Dernière mise à jour : 2026-11-27 (source Tableau blanc).
 
 ## Terminé
 
@@ -209,6 +209,17 @@ Dernière mise à jour : 2026-11-27 (source Présentations).
   honnête affiché à la place (exporter en images depuis l'application d'origine). `flutter
   analyze`/`flutter test` passent (60 tests). Vérifié visuellement dans le navigateur : état
   vide honnête, message honnête sur les formats non pris en charge.
+- **Source « Tableau blanc » (client Flutter)** : `lib/features/whiteboard/
+  whiteboard_screen.dart` — surface de dessin libre (`CustomPainter` pur Dart, sans
+  dépendance native, fonctionne sur le Web), 5 couleurs, 3 épaisseurs, annuler le dernier
+  trait, tout effacer avec confirmation (action destructive). **Le dessin n'est pas
+  enregistré** : perdu en quittant cet écran, honnêtement documenté, pas d'export image dans
+  ce prototype. `flutter analyze`/`flutter test` passent (65 tests). **Vérifié pour de vrai
+  dans le navigateur** : tracé de plusieurs traits de couleurs différentes, changement de
+  couleur en cours de dessin, annuler le dernier trait, confirmation d'effacement (annuler
+  puis confirmer) — tout fonctionne bout en bout, pas seulement testé unitairement.
+  Avec cette source, toutes les tuiles de la bibliothèque de contenus sont réelles à
+  l'exception de « Caméra ».
 - **Contrôle de session enrichi (écran mode B, client Flutter)** : historique local des
   connexions (démarrages/arrêts de capture, connexion directe, diffusion Space, cast DLNA —
   persisté via `shared_preferences`, jamais synchronisé, `lib/features/projection/
@@ -264,9 +275,9 @@ Dernière mise à jour : 2026-11-27 (source Présentations).
   (15 min) — l'utilisateur doit se reconnecter manuellement.
 - Client Flutter : l'authentification, la gestion des appareils, deux prototypes labo (mode B
   Android, mode C lentille), les Spaces (groupes de récepteurs), le contrôle de session
-  enrichi et les sources Photos/Vidéos/Documents/Présentations (voir « En cours ») existent.
-  La source Tableau blanc, ainsi que les implémentations finales des trois modes de
-  projection, restent à faire.
+  enrichi et la bibliothèque de sources (Photos/Vidéos/Documents/Présentations/Tableau blanc,
+  voir « En cours ») existent — seule la source Caméra reste « À venir ». Les
+  implémentations finales des trois modes de projection restent à faire.
 - Mode A (module USB-C) : non démarré — dépend des décisions matérielles/commerciales du §18.
 - Mode B (projecteur Wi-Fi) et Mode C (lentille) : prototypes labo en place (voir « En cours »),
   mais les implémentations finales (Miracast/DLNA pour B, accessoire optique réel pour C) dépendent

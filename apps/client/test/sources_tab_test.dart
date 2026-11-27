@@ -58,6 +58,20 @@ void main() {
     expect(find.text('Diaporama'), findsOneWidget);
   });
 
+  testWidgets('Tableau blanc est disponible et ouvre le tableau de dessin', (tester) async {
+    tester.view.physicalSize = const Size(800, 1400);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.reset);
+
+    await tester.pumpWidget(const MaterialApp(home: SourcesTab()));
+
+    await tester.tap(find.text('Tableau blanc'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Tableau blanc'), findsOneWidget);
+    expect(find.byIcon(Icons.undo), findsOneWidget);
+  });
+
   testWidgets('un type non implémenté affiche un message honnête au lieu d\'ouvrir un écran', (
     tester,
   ) async {
