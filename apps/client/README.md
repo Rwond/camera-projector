@@ -15,8 +15,8 @@ Accueil, Spaces, Sources, Appareils, Réglages.
 - **Spaces** : réel — un Space regroupe des récepteurs (PC/TV ayant déjà ouvert « Recevoir une
   projection ») pour diffuser vers tous en un geste. Voir la section dédiée plus bas.
 - **Sources** : bibliothèque de types de source. « Écran » (Mode B), « Lentille » (Mode C),
-  « Photos », « Vidéos », « Documents », « Présentations » et « Tableau blanc » (voir plus bas)
-  sont cliquables ; seule « Caméra » apparaît encore grisée « À venir ».
+  « Photos », « Vidéos », « Documents », « Présentations », « Tableau blanc » et « Caméra »
+  (voir plus bas) sont toutes cliquables — plus aucune tuile « À venir ».
 - **Appareils** : écran existant (`devices_screen.dart`), inchangé fonctionnellement.
 - **Réglages** : uniquement des réglages réels (déconnexion) — pas de bascule thème clair/sombre
   factice, l'app reste volontairement sombre uniquement (voir `theme/app_theme.dart`).
@@ -283,6 +283,24 @@ Dart, sans dépendance native : fonctionne y compris sur le Web.
 Honnêteté : **le dessin n'est pas enregistré** — il est perdu en quittant cet écran (pas de
 sauvegarde, pas d'export image dans ce prototype). Ne diffuse rien par elle-même, mêmes
 combinaisons que les autres sources (Mode B ou Smart TV DLNA) pour projeter ailleurs.
+
+## Source « Caméra »
+
+Onglet Sources → « Caméra » (`lib/features/camera/camera_screen.dart`) : affiche le flux de la
+caméra de l'appareil en direct (paquet `camera`), avec sélection entre plusieurs caméras
+détectées et affichage plein écran. Gère honnêtement, sans planter : aucune caméra détectée,
+accès refusé, ou plateforme sans pilote caméra enregistré.
+
+Honnêteté : **non disponible sur Windows** dans ce prototype — le paquet `camera` officiel
+n'embarque pas de pilote Windows (seuls Android, iOS et le Web sont couverts par ses
+implémentations fédérées `camera_android_camerax`/`camera_avfoundation`/`camera_web`) ; l'écran
+affiche alors un message honnête plutôt que de planter. **Jamais vérifié avec une vraie caméra
+physique** dans cet environnement de développement (Windows sans webcam pilotée par ce
+plugin) : seul le chemin d'erreur honnête (caméra absente, accès refusé, ou plateforme non prise
+en charge) a pu être vérifié ici, y compris en conditions réelles dans un navigateur (tentative
+réelle de `getUserMedia`, refusée par la politique de la page, affichant le message d'erreur
+honnête sans crash). Ne diffuse rien par elle-même, ne l'enregistre pas — mêmes combinaisons que
+les autres sources (Mode B ou Smart TV DLNA) pour projeter ailleurs.
 
 ## Stockage et sécurité
 

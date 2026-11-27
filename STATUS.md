@@ -2,7 +2,7 @@
 
 Convention : une ligne passe en **Terminé** seulement si elle est implémentée ET testée (automatiquement ou manuellement, avec preuve). "Scaffold" = structure posée, aucune logique métier encore écrite.
 
-Dernière mise à jour : 2026-11-27 (source Tableau blanc).
+Dernière mise à jour : 2026-11-27 (source Caméra).
 
 ## Terminé
 
@@ -218,8 +218,20 @@ Dernière mise à jour : 2026-11-27 (source Tableau blanc).
   dans le navigateur** : tracé de plusieurs traits de couleurs différentes, changement de
   couleur en cours de dessin, annuler le dernier trait, confirmation d'effacement (annuler
   puis confirmer) — tout fonctionne bout en bout, pas seulement testé unitairement.
-  Avec cette source, toutes les tuiles de la bibliothèque de contenus sont réelles à
-  l'exception de « Caméra ».
+- **Source « Caméra » (client Flutter)** : `lib/features/camera/camera_screen.dart` — affiche le
+  flux caméra de l'appareil en direct (paquet `camera` ajouté : `camera_android_camerax`,
+  `camera_avfoundation`, `camera_web`), sélection entre plusieurs caméras détectées, affichage
+  plein écran. Gère honnêtement, sans planter : aucune caméra détectée, accès refusé, ou
+  plateforme sans pilote caméra enregistré. **Non disponible sur Windows** dans ce prototype — le
+  paquet officiel n'embarque aucun pilote Windows. `flutter analyze`/`flutter test` passent (68
+  tests, dont un test qui laisse volontairement se produire le vrai `MissingPluginException` de
+  la plateforme plutôt que de le simuler). **Vérifié pour de vrai dans le navigateur** : clic réel
+  sur « Démarrer la caméra » déclenchant une vraie tentative `getUserMedia`, refusée par la
+  politique de la page — message d'erreur honnête affiché, aucun crash, bouton plein écran resté
+  désactivé. Jamais vérifié avec une vraie caméra physique qui fonctionne (aucune disponible dans
+  cet environnement de développement) : seuls les chemins d'erreur honnêtes ont pu être vérifiés.
+  Avec cette source, toutes les tuiles de la bibliothèque de contenus sont désormais réelles —
+  plus aucune tuile « À venir ».
 - **Contrôle de session enrichi (écran mode B, client Flutter)** : historique local des
   connexions (démarrages/arrêts de capture, connexion directe, diffusion Space, cast DLNA —
   persisté via `shared_preferences`, jamais synchronisé, `lib/features/projection/
@@ -275,8 +287,8 @@ Dernière mise à jour : 2026-11-27 (source Tableau blanc).
   (15 min) — l'utilisateur doit se reconnecter manuellement.
 - Client Flutter : l'authentification, la gestion des appareils, deux prototypes labo (mode B
   Android, mode C lentille), les Spaces (groupes de récepteurs), le contrôle de session
-  enrichi et la bibliothèque de sources (Photos/Vidéos/Documents/Présentations/Tableau blanc,
-  voir « En cours ») existent — seule la source Caméra reste « À venir ». Les
+  enrichi et la bibliothèque de sources (Photos/Vidéos/Documents/Présentations/Tableau
+  blanc/Caméra, voir « En cours ») existent — plus aucune tuile « À venir ». Les
   implémentations finales des trois modes de projection restent à faire.
 - Mode A (module USB-C) : non démarré — dépend des décisions matérielles/commerciales du §18.
 - Mode B (projecteur Wi-Fi) et Mode C (lentille) : prototypes labo en place (voir « En cours »),

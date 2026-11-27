@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../camera/camera_screen.dart';
 import '../documents/document_viewer_screen.dart';
 import '../lens/lens_projection_screen.dart';
 import '../photos/photo_viewer_screen.dart';
@@ -33,7 +34,11 @@ final _sourceTypes = <_SourceType>[
     label: 'Lentille',
     builder: (_) => const LensProjectionScreen(),
   ),
-  const _SourceType(icon: Icons.photo_camera_outlined, label: 'Caméra'),
+  _SourceType(
+    icon: Icons.photo_camera_outlined,
+    label: 'Caméra',
+    builder: (_) => const CameraScreen(),
+  ),
   _SourceType(
     icon: Icons.photo_outlined,
     label: 'Photos',
@@ -61,10 +66,8 @@ final _sourceTypes = <_SourceType>[
   ),
 ];
 
-/// Bibliothèque des sources de projection. Toutes sont réellement implémentées
-/// aujourd'hui à l'exception de « Caméra », qui apparaît grisée plutôt que
-/// masquée, pour montrer la direction du produit sans prétendre qu'elle
-/// existe déjà (voir docs/decisions-a-valider.md).
+/// Bibliothèque des sources de projection. Toutes les tuiles sont réellement
+/// implémentées aujourd'hui.
 class SourcesTab extends StatelessWidget {
   const SourcesTab({super.key});
 

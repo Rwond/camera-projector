@@ -72,16 +72,16 @@ void main() {
     expect(find.byIcon(Icons.undo), findsOneWidget);
   });
 
-  testWidgets('un type non implémenté affiche un message honnête au lieu d\'ouvrir un écran', (
-    tester,
-  ) async {
-    await tester.pumpWidget(
-      const MaterialApp(home: Scaffold(body: SourcesTab())),
-    );
+  testWidgets('Caméra est disponible et ouvre l\'écran caméra', (tester) async {
+    tester.view.physicalSize = const Size(800, 1400);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.reset);
+
+    await tester.pumpWidget(const MaterialApp(home: SourcesTab()));
 
     await tester.tap(find.text('Caméra'));
-    await tester.pump();
+    await tester.pumpAndSettle();
 
-    expect(find.text('Caméra : pas encore implémenté.'), findsOneWidget);
+    expect(find.text('Caméra en direct'), findsOneWidget);
   });
 }
