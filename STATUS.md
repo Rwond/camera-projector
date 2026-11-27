@@ -2,7 +2,7 @@
 
 Convention : une ligne passe en **Terminé** seulement si elle est implémentée ET testée (automatiquement ou manuellement, avec preuve). "Scaffold" = structure posée, aucune logique métier encore écrite.
 
-Dernière mise à jour : 2026-11-24 (contrôle de session enrichi).
+Dernière mise à jour : 2026-11-27 (sources Vidéos et Documents).
 
 ## Terminé
 
@@ -186,6 +186,21 @@ Dernière mise à jour : 2026-11-24 (contrôle de session enrichi).
   ou Smart TV (DLNA), déjà réels, pour projeter ce qui est affiché sur un autre appareil.
   `flutter analyze`/`flutter test` passent (choix d'image, activation du plein écran, fermeture
   au toucher). Vérifié visuellement dans le navigateur.
+- **Sources « Vidéos » et « Documents » (client Flutter)** : `lib/features/videos/
+  video_viewer_screen.dart` (bibliothèque `video_player`) choisit un fichier vidéo et le lit
+  en plein écran (lecture/pause) ; **non disponible sur le Web** dans ce prototype
+  (`video_player` y a besoin d'une URL, pas d'un chemin de fichier — message honnête affiché
+  plutôt qu'un échec silencieux) et **jamais vérifié avec un vrai fichier sur un appareil
+  physique** dans cet environnement (pas de téléphone/PC disponible pendant cette session).
+  `lib/features/documents/document_viewer_screen.dart` choisit un fichier et l'affiche en
+  plein écran s'il s'agit de texte brut (`.txt`/`.md`/`.csv`/`.log`/`.json`) ; tout autre
+  format (PDF, Word, PowerPoint...) affiche un message honnête plutôt qu'un faux rendu — un
+  moteur de rendu par format n'a pas été construit. `flutter analyze`/`flutter test`
+  passent (56 tests), y compris l'échec réel d'initialisation du lecteur vidéo dans cet
+  environnement de test (pas de double simulé — l'erreur de plateforme se produit
+  réellement et l'état honnête qui en résulte est vérifié). Vérifié visuellement dans le
+  navigateur : Documents fonctionne de bout en bout (texte affiché, plein écran), Vidéos
+  affiche correctement son message d'indisponibilité sur le Web.
 - **Contrôle de session enrichi (écran mode B, client Flutter)** : historique local des
   connexions (démarrages/arrêts de capture, connexion directe, diffusion Space, cast DLNA —
   persisté via `shared_preferences`, jamais synchronisé, `lib/features/projection/
@@ -240,9 +255,10 @@ Dernière mise à jour : 2026-11-24 (contrôle de session enrichi).
   compatibilité, CMS, support, journal d'audit). Pas de rafraîchissement automatique du jeton expiré
   (15 min) — l'utilisateur doit se reconnecter manuellement.
 - Client Flutter : l'authentification, la gestion des appareils, deux prototypes labo (mode B
-  Android, mode C lentille), les Spaces (groupes de récepteurs) et la source Photos (voir
-  « En cours ») existent. La bibliothèque de contenus vidéo/documents et les implémentations
-  finales des trois modes de projection restent à faire.
+  Android, mode C lentille), les Spaces (groupes de récepteurs), le contrôle de session
+  enrichi et les sources Photos/Vidéos/Documents (voir « En cours ») existent. Les sources
+  Présentations et Tableau blanc, ainsi que les implémentations finales des trois modes de
+  projection, restent à faire.
 - Mode A (module USB-C) : non démarré — dépend des décisions matérielles/commerciales du §18.
 - Mode B (projecteur Wi-Fi) et Mode C (lentille) : prototypes labo en place (voir « En cours »),
   mais les implémentations finales (Miracast/DLNA pour B, accessoire optique réel pour C) dépendent

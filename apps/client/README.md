@@ -14,8 +14,8 @@ Accueil, Spaces, Sources, Appareils, Réglages.
   prototypes réels.
 - **Spaces** : réel — un Space regroupe des récepteurs (PC/TV ayant déjà ouvert « Recevoir une
   projection ») pour diffuser vers tous en un geste. Voir la section dédiée plus bas.
-- **Sources** : bibliothèque de types de source. « Écran » (Mode B), « Lentille » (Mode C) et
-  « Photos » (visionneuse plein écran, voir plus bas) sont cliquables ; les autres types
+- **Sources** : bibliothèque de types de source. « Écran » (Mode B), « Lentille » (Mode C),
+  « Photos », « Vidéos » et « Documents » (voir plus bas) sont cliquables ; les autres types
   apparaissent grisés « À venir ».
 - **Appareils** : écran existant (`devices_screen.dart`), inchangé fonctionnellement.
 - **Réglages** : uniquement des réglages réels (déconnexion) — pas de bascule thème clair/sombre
@@ -229,6 +229,35 @@ elle-même** — c'est un visionneur, pas un module de streaming. Pour projeter 
 affichée sur un autre appareil, combiner avec le Mode B (capture d'écran) ou Smart TV (DLNA)
 déjà réels : ces derniers capturent/diffusent ce qui est à l'écran, quel que soit son contenu,
 donc fonctionnent aussi bien avec cette visionneuse qu'avec n'importe quel autre écran.
+
+## Source « Vidéos »
+
+Onglet Sources → « Vidéos » (`lib/features/videos/video_viewer_screen.dart`, bibliothèque
+`video_player`) : choisit un fichier vidéo et le lit en plein écran, avec lecture/pause.
+**Ne diffuse rien par elle-même** — comme Photos, à combiner avec le Mode B ou Smart TV (DLNA)
+pour projeter ailleurs ce qui est lu ici.
+
+Limites, honnêtement :
+
+- **Non disponible sur le Web dans ce prototype** : `video_player` y a besoin d'une URL
+  (réseau ou blob), pas d'un chemin de fichier local — construire l'URL blob nécessaire n'a
+  pas été fait ici. Un message explicite s'affiche plutôt que d'échouer silencieusement.
+- **L'échec d'initialisation du lecteur est affiché honnêtement** (message d'erreur, pas de
+  blocage) plutôt que de laisser un indicateur de chargement tourner indéfiniment — un délai
+  de garde de 8 s couvre le cas où la plateforme ne signale pas clairement l'échec.
+- **Jamais vérifié avec un vrai fichier vidéo sur un appareil physique** dans cet
+  environnement (pas de téléphone/PC disponible pendant cette session) — seul le
+  comportement face à un échec d'initialisation (chemin absent, plateforme non implémentée)
+  est couvert par les tests automatisés.
+
+## Source « Documents »
+
+Onglet Sources → « Documents » (`lib/features/documents/document_viewer_screen.dart`) :
+choisit un fichier et l'affiche en plein écran **uniquement s'il s'agit de texte brut**
+(`.txt`, `.md`, `.csv`, `.log`, `.json`). Pour tout autre format (PDF, Word, PowerPoint...),
+affiche un message honnête plutôt qu'un faux rendu — construire un moteur de rendu par format
+est un chantier à part entière, non entamé ici. Ne diffuse rien par elle-même, mêmes
+combinaisons que Photos/Vidéos pour projeter ailleurs.
 
 ## Stockage et sécurité
 
